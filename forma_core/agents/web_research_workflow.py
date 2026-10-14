@@ -17,6 +17,7 @@ from forma_core.agents.orchestrator import (
     extract_buses,
     extract_power_rails,
 )
+from forma_core.agents.product_model import ProductModel, product_model_prompt
 from forma_core.agents.system_architecture import (
     compact_component_context,
     compact_net_context,
@@ -145,6 +146,7 @@ WEB_GENERATION_STAGE_SPECS = [
     GenerationStageSpec(stage_id="validation_repair", dependencies=["wiring_netlist"]),
     GenerationStageSpec(stage_id="mechanical_fabrication", dependencies=["web_component_sourcing"]),
     GenerationStageSpec(stage_id="assembly", dependencies=["wiring_netlist", "mechanical_fabrication"]),
+    GenerationStageSpec(stage_id="product_model", dependencies=["web_architect", "web_component_sourcing"]),
     GenerationStageSpec(
         stage_id="completeness_audit",
         dependencies=["validation_repair", "mechanical_fabrication", "assembly"],
@@ -575,6 +577,11 @@ class WebResearchHardwarePipeline:
             schema=AssemblyWrapper,
         )
         assembly = assembly_wrapper.steps if assembly_wrapper is not None else []
+        stage_run.run(
+            "product_model",
+            lambda: self._generate_product_model(plan, components, mechanical),
+            schema=ProductModel,
+        )
         validation_issues = validation.issues if validation is not None else []
         stage_run.run(
             "completeness_audit",
@@ -645,6 +652,7 @@ class WebResearchHardwarePipeline:
         mechanical = stage_run.output("mechanical_fabrication", MechanicalNotes)
         assembly_wrapper = stage_run.output("assembly", AssemblyWrapper)
         audit = stage_run.output("completeness_audit", CompletenessAudit)
+        product_model = stage_run.output("product_model", ProductModel)
         cad_output = stage_run.output("cad_generation") or {}
         research = stage_run.output("external_research", ExternalSourceLibrary)
 
@@ -727,6 +735,9 @@ class WebResearchHardwarePipeline:
                 "external_research": research.source_metadata() if research is not None else None,
                 "sourcing_notes": selection.sourcing_notes if selection is not None else [],
                 "completeness_audit": audit.model_dump(mode="json") if audit is not None else None,
+                "product_model": (
+                    product_model.model_dump(mode="json") if product_model is not None and product_model.parts else None
+                ),
                 "cad_generation": (
                     cad_output.get("cad_generation") if isinstance(cad_output, dict) else None
                 ),
@@ -1122,6 +1133,23 @@ class WebResearchHardwarePipeline:
         """
         wrapper: AssemblyWrapper = self._call_llm_structured(prompt, AssemblyWrapper, pipeline_step_id="assembly")
         return wrapper.steps
+
+    def _generate_product_model(
+        self,
+        plan: WebProjectPlan,
+        components: List[ComponentInstance],
+        mechanical: Optional[MechanicalNotes],
+    ) -> ProductModel:
+        """Best-effort visual model; the overview falls back to mechanical placements without it."""
+        try:
+            return self._call_llm_structured(
+                product_model_prompt(plan.overview, components, mechanical),
+                ProductModel,
+                pipeline_step_id="product_model",
+            )
+        except Exception as exc:
+            logger.warning("Product model generation failed; the overview will use mechanical placements: %s", exc)
+            return ProductModel()
 
     def _audit_output(
         self,

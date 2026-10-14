@@ -422,6 +422,14 @@ class OpenAIImageProvider(ImageProvider):
             view_id = item["view_id"]
             label = item["label"]
             prompt = item["prompt"]
+            # Views derived from a named earlier view edit that image instead of the
+            # latest one, so each angle stays anchored to the same exterior render.
+            anchor_view_id = item.get("reference_view_id")
+            if anchor_view_id:
+                previous = next(
+                    (image for image in sequence if image.view_id == anchor_view_id),
+                    previous,
+                )
             if item.get("generation_mode") == "deterministic_svg":
                 prompt_result = self._compact_image_prompt(prompt, view_id=view_id)
                 image = build_project_layout_diagram_image(
@@ -2226,10 +2234,16 @@ def _design_assembly_model(
                 "hidden": ["only electronics occluded by the specified assembled structure"],
                 "rule": "show the assembled specified form; do not add a closed shell to an open-frame product.",
             },
+            "rear": {
+                "camera": "rear three-quarter exterior product render of the same assembly",
+                "visible": ["rear and side surfaces", "rear ports, vents, fasteners, and controls"],
+                "hidden": ["only electronics occluded by the specified assembled structure"],
+                "rule": "rotate the camera only; keep every exterior feature on its assigned surface.",
+            },
             "inside": {
-                "camera": "top-down or near top-down transparent assembly render",
+                "camera": "three-quarter cut-away section render",
                 "visible": [
-                    "transparent or ghosted occluding structure when present",
+                    "the shell with one section cleanly removed when an occluding structure is present",
                     "true component mounting planes",
                     "electronics preserving their specified facing normals",
                     "panel-mounted UI on its panel plane",
@@ -2237,7 +2251,7 @@ def _design_assembly_model(
                     "subsystem grouping cues",
                 ],
                 "hidden": ["opaque structure covering the inspected parts", "camera-facing rotated electronics"],
-                "rule": "prefer top-down transparent views; keep every component on its mounted_on plane and facing_normal.",
+                "rule": "prefer a clean cut-away section; keep every component on its mounted_on plane and facing_normal.",
             },
         },
         "continuity_checks": [
@@ -2415,7 +2429,7 @@ def build_project_image_sequence_prompts(user_prompt: str, ir: Any) -> List[Dict
         "Use subsystem contracts to preserve purpose, inputs, outputs, physical interfaces, placement constraints, failure modes, and verification checks.",
         "Use physical_dependency_graph and behavior_control_model to keep layout, wiring, airflow, and feedback relationships coherent.",
         "Preserve each component's mounted_on plane and facing_normal; do not rotate electronics to face the camera for aesthetics.",
-        "Prefer top-down transparent or ghosted inspection views for enclosed products and unobstructed top-down views for open products rather than dramatic perspective views.",
+        "For inspection views of enclosed products, reveal the internals with a clean cut-away section of the shell; for open products use an unobstructed view rather than dramatic perspective views.",
         "When a lid or top surface exists, do not fuse it with internal electronics or place visible internals under an opaque closed surface.",
         "The rendered pixels must contain no text: no dimension lines or values, measurement arrows, labels, annotations, captions, legends, component names, part numbers, watermarks, or logos.",
         "Render only the saved parts and features. Do not add electronics, controls, displays, or wiring absent from the spec. No hands, people, watermarks, brand logos, weapons, medical equipment, or mains-voltage hazards.",
@@ -2428,7 +2442,7 @@ def build_project_image_sequence_prompts(user_prompt: str, ir: Any) -> List[Dict
             "label": "Product exterior",
             "prompt": "\n".join(
                 [
-                    "Stage 1 of 2: create the assembled product exterior render.",
+                    "Stage 1 of 3: create the assembled product exterior render.",
                     shared_text,
                     "Use the case view state from design_assembly_model.",
                     "Render the specified physical form as an assembled product. It may be enclosed, partially enclosed, structural, wearable, folded, or open-frame; use a closed case only when the spec requires one.",
@@ -2441,29 +2455,40 @@ def build_project_image_sequence_prompts(user_prompt: str, ir: Any) -> List[Dict
             ),
         },
         {
-            "view_id": "inside",
-            "label": "Transparent top-down assembly",
+            "view_id": "rear",
+            "label": "Rear view",
+            "reference_view_id": "case",
             "prompt": "\n".join(
                 [
-                    "Stage 2 of 2: image-to-image from the exterior render into a top-down assembly inspection view.",
+                    "Stage 2 of 3: image-to-image from the exterior render to a rear three-quarter exterior view.",
+                    shared_text,
+                    "Use the rear view state from design_assembly_model.",
+                    "Show the exact same assembled product from the rear three-quarter angle, rotated roughly 135 degrees around the vertical axis from the exterior render.",
+                    "Only the camera may change. Keep the same materials, colors, proportions, lighting, and studio background.",
+                    "Show rear and side details such as ports, vents, seams, fasteners, and mounting features only where the spec places them; do not invent new features.",
+                    "Do not show hidden electronics. Do not draw dimension lines, measurement arrows, numeric values, or any other text.",
+                ]
+            ),
+        },
+        {
+            "view_id": "inside",
+            "label": "Cut-away inside",
+            "reference_view_id": "case",
+            "prompt": "\n".join(
+                [
+                    "Stage 3 of 3: image-to-image from the exterior render into a cut-away section view that reveals the inside.",
                     shared_text,
                     "Use the inside view state from design_assembly_model.",
-                    "Use the previous exterior product as the exact same physical assembly, now shown from a top-down or near top-down orthographic inspection angle.",
-                    "If a shell exists, make it transparent or ghosted at roughly 15-25% opacity so its mounting planes are visible. If the product is open-frame, preserve the exposed frame without inventing a shell.",
+                    "Show the exact same assembled product from the same three-quarter angle with a clean section of the outer shell removed, like a product cut-away illustration, so the internal parts are visible in their real positions.",
+                    "If the product is open-frame or has no shell, keep the structure as-is and show the exposed electronics without inventing a shell.",
+                    "Cut faces are flat and clean, showing realistic wall thickness. Everything outside the cut keeps the exterior render's materials, colors, and proportions.",
                     "Do not roll, invert, mirror, or flip the product. Keep the same front, right, left, and rear orientation from the exterior render.",
-                    "Keep the electronics on their specified mounting planes with a shared perspective; curved, radial, wall-mounted, and frame-mounted layouts do not need a flat tub floor.",
-                    "The visible structure, mounting features, standoffs, and electronics must all agree on one coordinate frame.",
                     "Use each component's mounted_on, facing_normal, visible_side, view_preference, and render_rule metadata. Preserve every board, control, and surface-mounted component on its specified plane.",
-                    "Do not rotate surface-mounted fans, ports, or displays to face the camera; use transparent structure, ghosting, or small true-plane insets instead.",
-                    "Show subtle subsystem grouping through placement and color cues only, with no written labels.",
+                    "Do not rotate surface-mounted fans, ports, or displays to face the camera.",
                     "Respect subsystem placement constraints: sensors stay exposed to the intended medium, hot drivers stay away from sensors, ports align with wall cutouts, airflow paths remain unblocked, and service loops remain plausible.",
-                    "For behavior/control systems, preserve the measured variable source, controller, driver/output path, actuator, and feedback path from behavior_control_model.",
-                    "Any opaque lid or top surface must not cover or blend into internal electronics that the inspection view is meant to reveal.",
-                    "Keep display, knob, button, and switch parts attached to their specified operator surface or show their underside/cables clearly; do not relocate them to another carrier unless their mounting_zone says so.",
-                    "Keep boards, drivers, power modules, terminals, standoffs, and wiring on their specified mounting surfaces or frame members.",
-                    "Show only the electronics and placements listed in the spec: mounted boards, display module, buttons, encoder/knob, power board, connectors, wiring harnesses, standoffs, screws, cable routing, and clearance.",
-                    "Use external_dimensions_mm and internal_usable_dimensions_mm only to guide proportions. Do not draw dimension lines, measurement arrows, numeric values, or any other text. Preserve exterior port, vent, fan, and control positions from the exterior render.",
-                    "Use a realistic three-quarter product view with the internal electronics clearly visible.",
+                    "Keep display, knob, button, and switch parts attached to their specified operator surface; keep boards, drivers, power modules, terminals, standoffs, and wiring on their specified mounting surfaces or frame members.",
+                    "Show only the electronics and placements listed in the spec, with plausible wiring and standoffs. Do not add parts absent from the spec.",
+                    "Use external_dimensions_mm and internal_usable_dimensions_mm only to guide proportions. Do not draw dimension lines, measurement arrows, numeric values, labels, or any other text.",
                 ]
             ),
         },

@@ -50,6 +50,36 @@ class ImageProviderRoutingTests(unittest.TestCase):
         self.assertIn("DS1 OLED display", prompt)
         self.assertIn("unless they are explicitly part of this design", prompt)
 
+    @staticmethod
+    def electronic_ir() -> SimpleNamespace:
+        return SimpleNamespace(overview=SimpleNamespace(title="Monitor", description="One board and one display"),
+            components=[SimpleNamespace(ref_des="U1", name="ESP32", category="Microcontroller"),
+                        SimpleNamespace(ref_des="DS1", name="OLED display", category="Display")])
+
+    def test_electronic_sequence_adds_rear_and_cutaway_views_anchored_to_exterior(self) -> None:
+        sequence = build_project_image_sequence_prompts("Show the saved monitor", self.electronic_ir())
+
+        self.assertEqual(["case", "rear", "inside"], [item["view_id"] for item in sequence])
+        self.assertEqual(["Product exterior", "Rear view", "Cut-away inside"], [item["label"] for item in sequence])
+        self.assertEqual([None, "case", "case"], [item.get("reference_view_id") for item in sequence])
+        self.assertIn("cut-away", sequence[2]["prompt"].lower())
+        self.assertNotIn("top-down transparent", sequence[2]["prompt"].lower())
+
+    def test_openai_sequence_edits_the_exterior_render_for_each_derived_view(self) -> None:
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai"}, clear=True):
+            provider = build_image_provider(force_enabled=True)
+        exterior = GeneratedImage(data_url="data:image/png;base64,ZXh0", provider="openai", model="gpt-image",
+            size="1024x1024", prompt="exterior", view_id="case", label="Product exterior")
+        provider._generate_image_from_prompt = Mock(return_value=exterior)
+        provider._edit_image_from_prompt = Mock(side_effect=lambda prompt, reference, **kwargs: GeneratedImage(
+            data_url="data:image/png;base64,ZWRpdA==", provider="openai", model="gpt-image", size="1024x1024",
+            prompt=prompt, view_id=kwargs["view_id"], label=kwargs["label"]))
+
+        sequence = provider.generate_project_image_sequence("Show the saved monitor", self.electronic_ir())
+
+        self.assertEqual(["case", "rear", "inside"], [image.view_id for image in sequence])
+        self.assertEqual(["case", "case"], [call.args[1].view_id for call in provider._edit_image_from_prompt.call_args_list])
+
     def test_project_image_prompts_keep_measurements_and_text_out_of_rendered_pixels(self) -> None:
         ir = SimpleNamespace(
             overview=SimpleNamespace(title="Pocket monitor", description="A compact sensor monitor"),

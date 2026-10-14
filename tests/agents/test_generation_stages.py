@@ -5,6 +5,7 @@ import unittest
 from types import SimpleNamespace
 
 from forma_core.agents.pipeline import GenerationStageRun, GenerationStageSpec
+from forma_core.agents.product_model import ProductModel, ProductModelPart
 from forma_core.agents.orchestrator import (
     DefaultAssemblyOutput,
     DefaultComponentSelection,
@@ -26,6 +27,7 @@ from forma_core.workspaces.projects.models import (
     ConnectionNet,
     FunctionalRequirements,
     MechanicalNotes,
+    MechanicalVector3,
     PinDefinition,
     PinReference,
     ProjectOverview,
@@ -248,6 +250,46 @@ class WebResearchPartialGenerationTests(unittest.TestCase):
 
         self.assertFalse(validation.is_valid)
         self.assertEqual(["NET_EMPTY"], [net.net_id for net in validation.nets])
+
+    def generate_with_working_wiring(self, pipeline: WebResearchHardwarePipeline):
+        pipeline._wire_project = lambda *args: WiringWrapper(
+            nets=self.supply_nets(include_controller=True),
+            pin_mappings=[],
+        )
+        return pipeline._generate_staged_project(
+            "Build a four wheel robot",
+            image_bytes=None,
+            image_mime_type=None,
+            model_validation=self.model_validation(),
+        )
+
+    def test_product_model_is_saved_for_the_overview_viewer(self) -> None:
+        pipeline, _saved = self.pipeline()
+        pipeline._call_llm_structured = lambda prompt, schema, **kwargs: ProductModel(parts=[
+            ProductModelPart(
+                label="Body",
+                shape="cylinder",
+                size_mm=MechanicalVector3(x_mm=75, y_mm=75, z_mm=270),
+                position_mm=MechanicalVector3(x_mm=0, y_mm=0, z_mm=135),
+                is_casing=True,
+            ),
+        ])
+
+        ir = self.generate_with_working_wiring(pipeline)
+
+        model = ir.assembly_metadata["product_model"]
+        self.assertEqual(["Body"], [part["label"] for part in model["parts"]])
+        self.assertEqual("succeeded", ir.assembly_metadata["generation_run"]["records"]["product_model"]["status"])
+
+    def test_product_model_failure_does_not_degrade_the_design(self) -> None:
+        pipeline, _saved = self.pipeline()
+        pipeline._call_llm_structured = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("provider down"))
+
+        ir = self.generate_with_working_wiring(pipeline)
+
+        self.assertIsNone(ir.assembly_metadata["product_model"])
+        self.assertEqual("succeeded", ir.assembly_metadata["generation_run"]["records"]["product_model"]["status"])
+        self.assertEqual("complete", ir.assembly_metadata["project_readiness"])
 
     def test_wiring_failure_preserves_bom_and_mechanical_artifacts(self) -> None:
         pipeline, saved = self.pipeline()

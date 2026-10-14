@@ -194,6 +194,7 @@ const MAX_CHAT_INDEX_ITEMS = 200;
 const NEW_PROJECT_TITLE = "New project";
 const EMPTY_GALLERY_IMAGES: Record<string, ProjectImageCandidate | null> = {};
 const EMPTY_PROJECT_HISTORY: any[] = [];
+const EMPTY_OVERVIEW_COMPONENTS: any[] = [];
 
 let lastKnownServerStatus: "connected" | "disconnected" | null = null;
 
@@ -5866,6 +5867,8 @@ export function FormaWorkspace({
             metrics={metrics}
             metadata={projectIR?.assembly_metadata || {}}
             systemArchitecture={projectIR?.system_architecture || null}
+            mechanical={projectIR?.mechanical || null}
+            components={Array.isArray(projectIR?.components) ? projectIR.components : EMPTY_OVERVIEW_COMPONENTS}
             showModelName={formaDevMode}
             showImageSection={showProductImageSection}
             canManageProgressiveReview={hostedChatEnabled && currentUserOwnsProject}

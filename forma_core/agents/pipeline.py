@@ -695,6 +695,14 @@ WEB_RESEARCH_AGENT_PIPELINE_STEPS = [
         duration_ms=5500,
     ),
     AgentPipelineStep(
+        id="product_model",
+        agent="Product Visualization Agent",
+        label="Shaping the 3D product model",
+        description="Describing the finished product as simple solids for the interactive 3D overview.",
+        duration_ms=5000,
+        optional=True,
+    ),
+    AgentPipelineStep(
         id="cad_generation",
         agent="OpenCAD Authoring Agent",
         label="Authoring native CAD",

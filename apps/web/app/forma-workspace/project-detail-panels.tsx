@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import {
@@ -12,6 +12,7 @@ import {
   Database,
   ExternalLink,
   GitBranch,
+  Maximize2,
   Monitor,
   Printer,
   ShieldCheck,
@@ -20,7 +21,9 @@ import {
   Wrench,
 } from "lucide-react";
 
+import ImageLightbox from "../../components/image-lightbox";
 import { isHardwareReferenceCandidate, type ProjectImageCandidate } from "../../lib/project-images";
+import { resolveProductModel } from "../../lib/product-model";
 
 const RUNPOD_PARTI_BASE_MODEL = "caid-technologies/parti-base";
 const BASETEN_GLM_MODEL = "zai-org/GLM-5.2";
@@ -30,6 +33,15 @@ const MechanicalScene = dynamic(() => import("../../components/mechanical-scene"
   loading: () => (
     <div className="flex h-full min-h-[420px] items-center justify-center bg-[var(--forma-page)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">
       Loading mechanical preview...
+    </div>
+  ),
+});
+
+const ProductModelViewer = dynamic(() => import("../../components/product-model-viewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[280px] items-center justify-center rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)] sm:h-[380px]">
+      Loading 3D model...
     </div>
   ),
 });
@@ -60,6 +72,8 @@ export function OverviewPanel({
   metrics,
   metadata,
   systemArchitecture,
+  mechanical = null,
+  components = [],
   showModelName = false,
   showImageSection = true,
   canManageProgressiveReview = false,
@@ -74,6 +88,8 @@ export function OverviewPanel({
   metrics: ReturnType<typeof emptyMetrics>;
   metadata: Record<string, any>;
   systemArchitecture?: Record<string, any> | null;
+  mechanical?: Record<string, any> | null;
+  components?: any[];
   showModelName?: boolean;
   showImageSection?: boolean;
   canManageProgressiveReview?: boolean;
@@ -83,7 +99,12 @@ export function OverviewPanel({
 }) {
   const imageKey = imageCandidates.map((candidate) => candidate.src).join("|");
   const [imageIndex, setImageIndex] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [revisionFeedback, setRevisionFeedback] = useState("");
+  const productModel = useMemo(
+    () => resolveProductModel(metadata?.product_model, mechanical, components),
+    [components, mechanical, metadata?.product_model],
+  );
 
   useEffect(() => {
     setImageIndex(0);
@@ -113,54 +134,86 @@ export function OverviewPanel({
   return (
     <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden bg-[var(--forma-page)] px-4 py-5 text-[var(--forma-text)] sm:px-5 sm:py-6">
       <div className="mx-auto min-w-0 max-w-[890px]">
-        {showProductImage && (
-          <div className="relative overflow-hidden rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface-muted)]">
-            {activeImage ? (
-              <Image
-                src={activeImage.src}
-                alt={activeImage.label}
-                width={1}
-                height={1}
-                unoptimized
-                onError={() => setImageIndex((current) => current + 1)}
-                className="h-[280px] w-full object-cover object-center sm:h-[380px]"
-              />
-            ) : (
-              <ImageUnavailableState failed={metadata.image_output_failed === true || metadata.image_output_status === "failed"} />
-            )}
-            {activeImage && (
-              <div className="absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-[var(--forma-border)] bg-[rgb(var(--forma-chrome-rgb)/0.92)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--forma-text-strong)] shadow-sm backdrop-blur-sm">
-                {activeImage.label}
+        {(showProductImage || productModel) && (
+          <div className={showProductImage && productModel ? "grid gap-4 md:grid-cols-2" : ""}>
+            {showProductImage && (
+              <div className="min-w-0">
+                <div className="relative overflow-hidden rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface-muted)]">
+                  {activeImage ? (
+                    <button
+                      type="button"
+                      onClick={() => setLightboxIndex(imageIndex)}
+                      aria-label={`Open ${activeImage.label} full size`}
+                      className="group block w-full cursor-zoom-in"
+                    >
+                      <Image
+                        src={activeImage.src}
+                        alt={activeImage.label}
+                        width={1}
+                        height={1}
+                        unoptimized
+                        onError={() => setImageIndex((current) => current + 1)}
+                        className="h-[280px] w-full object-cover object-center transition duration-300 group-hover:scale-[1.02] sm:h-[380px]"
+                      />
+                      <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-md border border-[var(--forma-border)] bg-[rgb(var(--forma-chrome-rgb)/0.92)] px-2 py-1 text-[11px] font-medium text-[var(--forma-text-strong)] opacity-90 shadow-sm backdrop-blur-sm transition group-hover:opacity-100">
+                        <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        View full size
+                      </span>
+                    </button>
+                  ) : (
+                    <ImageUnavailableState failed={metadata.image_output_failed === true || metadata.image_output_status === "failed"} />
+                  )}
+                  {activeImage && (
+                    <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-[var(--forma-border)] bg-[rgb(var(--forma-chrome-rgb)/0.92)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--forma-text-strong)] shadow-sm backdrop-blur-sm">
+                      {activeImage.label}
+                    </div>
+                  )}
+                </div>
+
+                {heroImages.length > 1 && (
+                  <div className={`mt-3 grid grid-cols-2 gap-2 ${heroImages.length >= 4 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+                    {heroImages.slice(0, 4).map((candidate, index) => (
+                      <button
+                        key={`${candidate.src}-${index}`}
+                        type="button"
+                        onClick={() => setImageIndex(index)}
+                        onDoubleClick={() => setLightboxIndex(index)}
+                        className={`min-w-0 rounded-lg border p-1.5 text-left transition ${
+                          imageIndex === index
+                            ? "border-[var(--forma-text-strong)] bg-[var(--forma-surface)] text-[var(--forma-text-strong)]"
+                            : "border-[var(--forma-border)] bg-[var(--forma-surface)] text-[var(--forma-text-muted)] hover:border-[var(--forma-text-muted)] hover:text-[var(--forma-text-strong)]"
+                        }`}
+                      >
+                        <Image
+                          src={candidate.src}
+                          alt={candidate.label}
+                          width={1}
+                          height={1}
+                          unoptimized
+                          className="h-16 w-full rounded-md bg-[var(--forma-surface-muted)] object-cover"
+                        />
+                        <div className="mt-1.5 truncate text-[10px] font-medium">{candidate.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            {productModel && <ProductModelViewer key={`${productModel.parts.length}:${productModel.extent.join(",")}`} model={productModel} />}
           </div>
         )}
 
-        {showProductImage && heroImages.length > 1 && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {heroImages.slice(0, 3).map((candidate, index) => (
-              <button
-                key={`${candidate.src}-${index}`}
-                type="button"
-                onClick={() => setImageIndex(index)}
-                className={`min-w-0 rounded-lg border p-2 text-left transition ${
-                  imageIndex === index
-                    ? "border-[var(--forma-text-strong)] bg-[var(--forma-surface)] text-[var(--forma-text-strong)]"
-                    : "border-[var(--forma-border)] bg-[var(--forma-surface)] text-[var(--forma-text-muted)] hover:border-[var(--forma-text-muted)] hover:text-[var(--forma-text-strong)]"
-                }`}
-              >
-                <Image
-                  src={candidate.src}
-                  alt={candidate.label}
-                  width={1}
-                  height={1}
-                  unoptimized
-                  className="h-20 w-full rounded-md bg-[var(--forma-surface-muted)] object-cover"
-                />
-                <div className="mt-2 truncate text-[10px] font-medium">{candidate.label}</div>
-              </button>
-            ))}
-          </div>
+        {lightboxIndex !== null && heroImages.length > 0 && (
+          <ImageLightbox
+            images={heroImages}
+            index={Math.min(lightboxIndex, heroImages.length - 1)}
+            onIndexChange={(index) => {
+              setLightboxIndex(index);
+              setImageIndex(index);
+            }}
+            onClose={() => setLightboxIndex(null)}
+          />
         )}
 
         {progressiveReviewVisible && (
