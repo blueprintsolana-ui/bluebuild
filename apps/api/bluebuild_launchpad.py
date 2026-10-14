@@ -588,6 +588,9 @@ async def prepare_launch(project_id: str, request: Request, user: UserContext = 
     created_on = (_env("BLUEBUILD_PUBLIC_SITE_URL") or request.headers.get("origin") or "").rstrip("/")
     if not created_on:
         raise _bad_request("Couldn't work out this site's address for the pitch deck. Please reload and try again.")
+    if (urlparse(created_on).hostname or "").lower() in {"localhost", "127.0.0.1", "::1"} and not _env("BLUEBUILD_LAUNCHPAD_ALLOW_LOCAL"):
+        # pump.fun could never load a localhost pitch deck or logo, so the coin would be broken forever.
+        raise _bad_request("Coins can't be launched from a local test copy, because pump.fun couldn't reach the pitch deck. Launch from the live site.")
     # Every coin's website is its own pitch deck; creators can't change or remove it.
     details.website = f"{created_on}/coin/{details.mint}"
     try:

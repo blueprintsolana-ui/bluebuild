@@ -229,6 +229,16 @@ class LaunchpadEndpointTests(unittest.TestCase):
         self.assertEqual(200, self.client.get(pitch["images"][0]["url"].removeprefix("http://testserver")).status_code)
         self.assertEqual(404, self.client.get("/launchpad/coins/9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin").status_code)
 
+    def test_launches_from_a_local_copy_are_refused(self) -> None:
+        refused = self.client.post(
+            "/launchpad/projects/project-1/prepare",
+            json=launch_payload(),
+            headers={"Origin": "http://localhost:3000"},
+        )
+
+        self.assertEqual(400, refused.status_code)
+        self.assertIn("local test copy", refused.json()["detail"]["message"])
+
     def test_a_failed_pitch_deck_stops_the_launch_before_the_wallet_step(self) -> None:
         with patch.object(launchpad, "_build_pitch_deck", side_effect=RuntimeError("storage down")):
             refused = self.client.post("/launchpad/projects/project-1/prepare", json=launch_payload())
