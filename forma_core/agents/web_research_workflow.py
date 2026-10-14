@@ -16,6 +16,7 @@ from forma_core.agents.orchestrator import (
     estimate_current_draw,
     extract_buses,
     extract_power_rails,
+    simulated_generation_allowed,
 )
 from forma_core.agents.product_model import ProductModel, product_model_prompt
 from forma_core.agents.system_architecture import (
@@ -318,6 +319,8 @@ class WebResearchHardwarePipeline:
         if self.use_simulation:
             if deployment_mode_enabled():
                 raise AlphaGenerationUnavailableError(generation_unavailable_message(self.get_debug_config()))
+            if not simulated_generation_allowed():
+                raise LLMProviderConfigError(generation_unavailable_message(self.get_debug_config()))
             logger.info("Web research workflow is using simulation fallback because external generation is unavailable.")
             emit_agent_pipeline_event(self.workflow_id, "external_research", "skipped", details={"reason": self.research_client.config.reason})
             ir = HardwarePipelineOrchestrator(use_simulation=True, runtime_config=self.runtime_config, settings=self.settings).generate_project(

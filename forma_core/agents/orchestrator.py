@@ -279,6 +279,15 @@ def _generation_fallback_disabled() -> bool:
     )
 
 
+def simulated_generation_allowed() -> bool:
+    """Canned demo designs only when someone explicitly asks for them.
+
+    Without this, a missing API key silently returned unrelated example
+    designs (a deadbolt for a fridge-magnet prompt) instead of an error.
+    """
+    return _env_bool("FORMA_ALLOW_SIMULATED_GENERATION") and not _generation_fallback_disabled()
+
+
 def canonical_project_uuid(value: Optional[str] = None) -> str:
     """Return a canonical UUID string, ignoring legacy/non-UUID project ids."""
     if value:
@@ -671,6 +680,7 @@ class HardwarePipelineOrchestrator:
         )
         self.llm_provider = build_llm_provider(runtime_config=self.runtime_config, settings=settings)
         self.use_simulation = use_simulation or not self.llm_provider.is_configured
+        self.simulation_requested = use_simulation
         self.model_name = self.llm_provider.model_name
         self.persist_project = persist_project
         self._active_generation_metadata: Dict[str, Any] = {}
@@ -836,7 +846,7 @@ class HardwarePipelineOrchestrator:
         if self.use_simulation:
             if deployment_mode_enabled():
                 raise AlphaGenerationUnavailableError(generation_unavailable_message(self.get_debug_config()))
-            if _generation_fallback_disabled():
+            if _generation_fallback_disabled() or not (self.simulation_requested or simulated_generation_allowed()):
                 raise LLMProviderConfigError(generation_unavailable_message(self.get_debug_config()))
             return self._generate_simulated_project(user_prompt, has_image=bool(image_bytes))
 
