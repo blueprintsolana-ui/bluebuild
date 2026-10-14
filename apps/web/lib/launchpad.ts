@@ -26,6 +26,7 @@ export type LaunchedCoin = {
   signature: string | null;
   launched_at: string | null;
   pump_url: string;
+  product_page_path?: string;
 };
 
 export type LaunchpadProjectStatus = {

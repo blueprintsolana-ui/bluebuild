@@ -61,6 +61,7 @@ declare module "lucide-react" {
   export const PanelLeftClose: LucideIcon;
   export const PanelLeftOpen: LucideIcon;
   export const Pin: LucideIcon;
+  export const Minus: LucideIcon;
   export const Plus: LucideIcon;
   export const Printer: LucideIcon;
   export const Radio: LucideIcon;

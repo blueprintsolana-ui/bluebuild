@@ -2,7 +2,8 @@
 
 import { ContactShadows, Edges, Html, OrbitControls, RoundedBox } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Minus, Plus } from "lucide-react";
 import * as THREE from "three";
 
 import { halfExtents, type ProductFinish, type ProductPart, type ResolvedProductModel, type Vec3 } from "../lib/product-model";
@@ -23,6 +24,8 @@ const FINISH_LOOK: Record<ProductFinish, { metalness: number; roughness: number;
 };
 
 const HIGHLIGHT = "#ffb547";
+
+type OrbitControlsHandle = { object: THREE.Camera; target: THREE.Vector3; update: () => void };
 
 type ViewerProps = {
   model: ResolvedProductModel;
@@ -170,6 +173,7 @@ export default function ProductModelViewer({ model, className = "" }: ViewerProp
   const [xray, setXray] = useState(false);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
   const [autoRotate, setAutoRotate] = useState(true);
+  const controlsRef = useRef<OrbitControlsHandle | null>(null);
 
   const scale = SCENE_SIZE / Math.max(...model.extent);
   const centerHeight = (model.extent[2] * scale) / 2;
@@ -188,6 +192,18 @@ export default function ProductModelViewer({ model, className = "" }: ViewerProp
     [model.parts, xray],
   );
   const selectPart = (part: ProductPart) => setSelectedNumber((current) => (current === part.number ? null : part.number));
+  const minDistance = radius * 1.1;
+  const maxDistance = distance * 3;
+  // Wheel zoom is off so scrolling the page never gets stuck on the model; these buttons zoom instead.
+  const zoom = (factor: number) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    setAutoRotate(false);
+    const offset = controls.object.position.clone().sub(controls.target);
+    offset.setLength(Math.min(Math.max(offset.length() * factor, minDistance), maxDistance));
+    controls.object.position.copy(controls.target).add(offset);
+    controls.update();
+  };
 
   return (
     <div className={`flex min-w-0 flex-col ${className}`}>
@@ -224,12 +240,14 @@ export default function ProductModelViewer({ model, className = "" }: ViewerProp
 
           <ContactShadows position={[0, 0, 0]} opacity={0.45} scale={SCENE_SIZE * 2.2} blur={2.4} far={SCENE_SIZE} />
           <OrbitControls
+            ref={controlsRef as never}
             makeDefault
             target={[0, centerHeight, 0]}
             enableDamping
             enablePan={false}
-            minDistance={radius * 1.1}
-            maxDistance={distance * 3}
+            enableZoom={false}
+            minDistance={minDistance}
+            maxDistance={maxDistance}
             maxPolarAngle={Math.PI * 0.85}
             autoRotate={autoRotate}
             autoRotateSpeed={0.9}
@@ -269,7 +287,15 @@ export default function ProductModelViewer({ model, className = "" }: ViewerProp
           )}
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--forma-text-muted)]">
-          Drag to rotate · scroll to zoom
+          Drag to rotate
+        </div>
+        <div className="absolute bottom-3 right-3 z-30 flex overflow-hidden rounded-md border border-[var(--forma-border)] bg-[rgb(var(--forma-chrome-rgb)/0.92)] shadow-sm backdrop-blur-sm">
+          <button type="button" onClick={() => zoom(0.8)} aria-label="Zoom in" className="flex h-8 w-8 items-center justify-center text-[var(--forma-text-strong)] hover:bg-white/10">
+            <Plus className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => zoom(1.25)} aria-label="Zoom out" className="flex h-8 w-8 items-center justify-center border-l border-[var(--forma-border)] text-[var(--forma-text-strong)] hover:bg-white/10">
+            <Minus className="h-4 w-4" />
+          </button>
         </div>
       </div>
 

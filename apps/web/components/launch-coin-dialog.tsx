@@ -260,7 +260,7 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
         }
       }
 
-      setPhase({ step: "working", message: "Recording your coin on Bluebuild…" });
+      setPhase({ step: "working", message: "Recording your coin and building its product page…" });
       let coin: LaunchedCoin | undefined;
       for (let attempt = 0; attempt < 12 && !coin; attempt += 1) {
         const result = await confirmLaunch(prepared.launch_id, createSignature, await getToken());
@@ -333,6 +333,16 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
               <a href={phase.coin.pump_url} target="_blank" rel="noreferrer" className="connect-wallet-button">
                 View on pump.fun
               </a>
+              {phase.coin.product_page_path && (
+                <a
+                  href={phase.coin.product_page_path}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-11 items-center rounded-lg border border-[var(--forma-border)] px-4 text-sm font-medium text-[var(--forma-text-strong)]"
+                >
+                  Open product page
+                </a>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -463,9 +473,13 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
               </section>
 
               <section aria-label="Links" className="grid gap-3 sm:grid-cols-3">
+                <p className="text-[11px] leading-5 text-[var(--forma-text-muted)] sm:col-span-3">
+                  Leave the website empty and your coin links to a Bluebuild product page for this design, with its renders, 3D
+                  model, use cases and specs.
+                </p>
                 <label className={labelClass}>
                   4. Website <span className="normal-case tracking-normal">(optional)</span>
-                  <input className={inputClass} value={form.website} onChange={update("website")} placeholder="https://" disabled={busy} />
+                  <input className={inputClass} value={form.website} onChange={update("website")} placeholder="Bluebuild product page" disabled={busy} />
                 </label>
                 <label className={labelClass}>
                   X / Twitter <span className="normal-case tracking-normal">(optional)</span>

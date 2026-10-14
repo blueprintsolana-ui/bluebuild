@@ -20,12 +20,13 @@ export function suggestTicker(title: string): string {
   return ticker.slice(0, 6) || "COIN";
 }
 
-export function defaultLaunchForm(title: string, description: string, designUrl: string): LaunchForm {
+/** Website starts empty: the backend then points the coin at its Bluebuild product page. */
+export function defaultLaunchForm(title: string, description: string): LaunchForm {
   return {
     name: title.trim().slice(0, 32),
     symbol: suggestTicker(title),
     description: description.trim().slice(0, 500),
-    website: designUrl,
+    website: "",
     twitter: "",
     telegram: "",
     initialBuySol: "0",

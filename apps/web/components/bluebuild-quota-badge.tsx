@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { webConfig } from "../lib/config";
 import { useFormaAuth } from "../lib/forma-auth";
 
@@ -48,6 +49,8 @@ function tierLabel(status: QuotaStatus): string {
 export function BluebuildQuotaBadge() {
   const { isSignedIn, getToken, openSignIn } = useFormaAuth();
   const [status, setStatus] = useState<QuotaStatus | null>(null);
+  // Coin product pages are for coin visitors, not design allowances.
+  const onProductPage = (usePathname() || "").startsWith("/coin/");
 
   const refresh = useCallback(async () => {
     try {
@@ -75,7 +78,7 @@ export function BluebuildQuotaBadge() {
     };
   }, [refresh]);
 
-  if (!status?.gating) return null;
+  if (!status?.gating || onProductPage) return null;
 
   const shell: React.CSSProperties = {
     position: "fixed",

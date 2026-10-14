@@ -10,10 +10,10 @@ export const LANDING_HTML = String.raw`<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Bluebuild — Describe it. We'll draw the build.</title>
-<meta name="description" content="Type one sentence. Bluebuild returns a parts list, wiring diagram, 3D layout and build guide for your maker project. Open source.">
-<meta property="og:title" content="Bluebuild — Describe it. We'll draw the build.">
-<meta property="og:description" content="Open-source AI hardware design. Parts, wiring, 3D layout and build steps from one sentence.">
+<title>Bluebuild — Describe it. We'll draw the build. Then launch it.</title>
+<meta name="description" content="Type one sentence. Bluebuild returns a parts list, wiring diagram, 3D model and build guide for your product idea, then lets you launch a pump.fun coin for it with its own product page. Open source.">
+<meta property="og:title" content="Bluebuild — Describe it. We'll draw the build. Then launch it.">
+<meta property="og:description" content="Open-source AI hardware design and launchpad. Parts, wiring, 3D model and build steps from one sentence, plus a pump.fun coin and product page for your idea.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@bluebuild_AI">
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijk2IiBmaWxsPSIjMTQzNjZFIi8+CjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE2NiAzODApIHNjYWxlKDQuMikiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Y0RjdGQiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiPjxwYXRoIGQ9Ik0wIC02NFYwIi8+PGNpcmNsZSBjeD0iMjAiIGN5PSItMjAiIHI9IjIwIi8+PC9nPgo8cGF0aCBkPSJNMzEwIDI2MkwzNjAgMjEyIiBzdHJva2U9IiNGRkI1NDciIHN0cm9rZS13aWR0aD0iMTQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPgo=">
@@ -115,6 +115,7 @@ a:hover .bb-arrow{transform:translateX(5px)}
 .bb-stagger>*:nth-child(3){animation-range:entry 12% cover 42%}
 .bb-stagger>*:nth-child(4){animation-range:entry 18% cover 48%}
 }
+@media (max-width: 600px){h1{font-size:44px !important}h2{font-size:30px !important}}
 @media (prefers-reduced-motion: reduce){
 *,*::before,*::after{animation:none!important;transition:none!important}
 .bb-flow,.bb-scan{display:none}
@@ -131,6 +132,7 @@ a:hover .bb-arrow{transform:translateX(5px)}
 <a href="#top" class="bb-logo" aria-label="Bluebuild home" style="display: flex; align-items: center"><svg role="img" aria-label="bluebuild" style="height:30px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="-4 -68 344 72" ><g fill="none" stroke="#F4F7FB" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -64 V0"/><circle cx="20" cy="-20" r="20"/><path d="M52 -64 V0"/><path d="M64 -40 V-20 A20 20 0 0 0 104 -20 V-40 M104 -40 V0"/><path d="M116 -20 H156 A20 20 0 1 0 150.14 -5.86"/><path d="M168 -64 V0"/><circle cx="188" cy="-20" r="20"/><path d="M220 -40 V-20 A20 20 0 0 0 260 -20 V-40 M260 -40 V0"/><path d="M272 -40 V0"/><circle cx="272" cy="-54" r="4" fill="#F4F7FB" stroke="none"/><path d="M284 -64 V0"/><circle cx="316" cy="-20" r="20"/><path d="M336 -64 V0"/></g></svg></a>
 <div class="bb-nav" style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase">
 <a href="#how" style="text-decoration: none">How it works</a>
+<a href="#launch" style="text-decoration: none">Launchpad</a>
 <a href="#docs" style="text-decoration: none">Docs</a>
 <a href="#token" style="text-decoration: none">Token</a>
 <a href="https://x.com/bluebuild_AI" class="bb-x" aria-label="Bluebuild on X" style="display: flex; align-items: center; text-decoration: none; gap: 8px">
@@ -145,10 +147,10 @@ a:hover .bb-arrow{transform:translateX(5px)}
 <!-- HERO -->
 <section id="top" style="max-width: 1240px; margin: 0 auto; padding: 100px 24px 100px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 60px; align-items: center">
 <div style="display: flex; flex-direction: column; gap: 28px">
-<p class="bb-in" style="margin: 0; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 12px; letter-spacing: 0.14em; color: #A9BEDD; text-transform: uppercase">DWG NO. BB-001 &#183; Open-source AI hardware design</p>
-<h1 class="bb-in bb-d1" style="margin: 0; font-size: 64px; line-height: 1.05; font-weight: 600; letter-spacing: -0.02em">Describe it.<br>We'll draw the build.</h1>
+<p class="bb-in" style="margin: 0; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 12px; letter-spacing: 0.14em; color: #A9BEDD; text-transform: uppercase">DWG NO. BB-001 &#183; Open-source AI hardware design &#183; Launchpad</p>
+<h1 class="bb-in bb-d1" style="margin: 0; font-size: 64px; line-height: 1.05; font-weight: 600; letter-spacing: -0.02em">Describe it.<br>We'll draw the build.<br><span style="color: #FFB547">Then launch it.</span></h1>
 <span class="bb-dim" aria-hidden="true"></span>
-<p class="bb-in bb-d2" style="margin: 0; font-size: 19px; line-height: 1.55; color: #A9BEDD; max-width: 520px">Type one sentence. Bluebuild returns a parts list, a wiring diagram, a 3D layout and a step-by-step build guide for your low-voltage maker project.</p>
+<p class="bb-in bb-d2" style="margin: 0; font-size: 19px; line-height: 1.55; color: #A9BEDD; max-width: 540px">Type one sentence. Bluebuild returns a parts list, a wiring diagram, a 3D model and a step-by-step build guide for your product idea. Then launch a pump.fun coin for it, with its own product page, straight from your wallet.</p>
 <div class="bb-in bb-d3 bb-promptbox" style="background: #1C4A91; border: 1px solid #3A70C4; border-radius: 4px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
 <label for="bb-prompt" style="font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #A9BEDD">What do you want to build?</label>
 <div style="display: flex; flex-wrap: wrap; gap: 12px">
@@ -235,7 +237,12 @@ a:hover .bb-arrow{transform:translateX(5px)}
 <div class="bb-card" style="border: 1px solid #3A70C4; padding: 28px; display: flex; flex-direction: column; gap: 14px; background: #14366E">
 <span class="bb-step" style="font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; color: #FFB547; letter-spacing: 0.12em">03 &#8212; BUILD</span>
 <h3 style="margin: 0; font-size: 22px; font-weight: 600">Get the full package</h3>
-<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #A9BEDD">Parts list, interactive wiring diagram, 3D layout, a product concept image and step-by-step assembly instructions. Keep iterating on the same project.</p>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #A9BEDD">Parts list, interactive wiring diagram, 3D model, product renders and step-by-step assembly instructions. Keep iterating on the same project.</p>
+</div>
+<div class="bb-card" style="border: 1px solid #3A70C4; padding: 28px; display: flex; flex-direction: column; gap: 14px; background: #14366E">
+<span class="bb-step" style="font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; color: #FFB547; letter-spacing: 0.12em">04 &#8212; LAUNCH</span>
+<h3 style="margin: 0; font-size: 22px; font-weight: 600">Launch a coin for it</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #A9BEDD">Turn the idea into a pump.fun coin from your own wallet. Bluebuild builds its product page, the coin's website, from your design.</p>
 </div>
 </div>
 </div>
@@ -268,8 +275,54 @@ a:hover .bb-arrow{transform:translateX(5px)}
 <h3 style="margin: 0; font-size: 20px; font-weight: 600">Build guide</h3>
 <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #A9BEDD">Step-by-step assembly instructions, in order.</p>
 </div>
+<div class="bb-card" style="border: 1px solid #3A70C4; padding: 24px; display: flex; flex-direction: column; gap: 14px; background: rgba(14, 42, 87, 0.6)">
+<svg class="bb-icon" width="36" height="36" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#FFB547" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path pathLength="1" d="M5 15c-1.5 1.5-2 4-2 6 2 0 4.5-.5 6-2M9 13l2 2M14.5 4.5c2-2 5-2 5.5-1.5s.5 3.5-1.5 5.5L11 16l-3-3 6.5-8.5z"></path><circle pathLength="1" cx="15.5" cy="8.5" r="1.5"></circle></svg>
+<h3 style="margin: 0; font-size: 20px; font-weight: 600">Product page &amp; coin</h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #A9BEDD">A shareable product page with renders, 3D model, use cases and specs, ready to be your coin's website.</p>
+</div>
 </div>
 <p class="bb-reveal" style="margin: 0; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 12px; letter-spacing: 0.1em; color: #A9BEDD">SCOPE: 3.3&#8211;5 V MAKER ELECTRONICS. DESIGNS NEED HUMAN REVIEW BEFORE YOU BUILD.</p>
+</section>
+
+<!-- LAUNCHPAD -->
+<section id="launch" class="bb-deep" style="border-top: 1px solid #3A70C4; border-bottom: 1px solid #3A70C4">
+<div style="max-width: 1240px; margin: 0 auto; padding: 100px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 60px; align-items: center">
+<div class="bb-reveal" style="display: flex; flex-direction: column; gap: 20px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 12px; letter-spacing: 0.14em; color: #FFB547; text-transform: uppercase">Launchpad</p>
+<h2 style="margin: 0; font-size: 40px; line-height: 1.15; font-weight: 600">Every idea can have a coin.</h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.6; color: #A9BEDD">When your design is ready, launch a pump.fun coin for it in a couple of clicks. Bluebuild turns the design into a product page that pitches the idea: renders, a 3D model you can spin, use cases, specs and what's inside.</p>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px">
+<li style="display: flex; gap: 12px; font-size: 16px; line-height: 1.55"><span style="color: #FFB547; font-family: 'IBM Plex Mono', Consolas, monospace">01</span><span><strong>Your wallet, your coin.</strong> <span style="color: #A9BEDD">You create it on pump.fun yourself. Bluebuild never holds your keys and takes no fee.</span></span></li>
+<li style="display: flex; gap: 12px; font-size: 16px; line-height: 1.55"><span style="color: #FFB547; font-family: 'IBM Plex Mono', Consolas, monospace">02</span><span><strong>A product page, built for you.</strong> <span style="color: #A9BEDD">It becomes the coin's website, so buyers see what the product actually is.</span></span></li>
+<li style="display: flex; gap: 12px; font-size: 16px; line-height: 1.55"><span style="color: #FFB547; font-family: 'IBM Plex Mono', Consolas, monospace">03</span><span><strong>Bring your community.</strong> <span style="color: #A9BEDD">Add your X and Telegram links, or point the coin at your own site.</span></span></li>
+</ul>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<a class="bb-btn bb-glow" href="/app" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; background: #FFB547; color: #1A1300; border-radius: 4px; text-decoration: none; font-weight: 600">Design something to launch&#160;<span class="bb-arrow" aria-hidden="true">&#8594;</span></a>
+</div>
+<p style="margin: 0; max-width: 560px; font-size: 13px; line-height: 1.6; color: #A9BEDD">Coins are created by their designers on pump.fun. Bluebuild takes no fee, doesn't endorse or promote any coin, and can't undo transactions. Crypto is risky; only spend what you can afford to lose.</p>
+</div>
+<figure class="bb-fig bb-reveal" style="margin: 0; background: #14366E; border: 1px solid #3A70C4; padding: 24px; display: flex; flex-direction: column; gap: 18px" aria-label="Example: a design launched as a coin with its product page">
+<div style="display: flex; align-items: center; gap: 14px">
+<svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><rect x="1" y="1" width="54" height="54" rx="10" fill="#0E2A57" stroke="#3A70C4"/><rect x="22" y="16" width="12" height="28" rx="5" fill="#C0C6CF"/><rect x="21" y="11" width="14" height="7" rx="2" fill="#1C1F26"/><rect x="24.5" y="12.5" width="7" height="3" rx="1" fill="#FFB547"/></svg>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 18px; font-weight: 600">Smart Sip Bottle</span>
+<span style="font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; color: #FFB547">$SIP &#183; LIVE ON PUMP.FUN</span>
+</div>
+</div>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #F4F7FB">Know exactly how cold your water is, at a glance.</p>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px">
+<div style="border: 1px solid #3A70C4; padding: 10px; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 11px; letter-spacing: 0.08em; color: #A9BEDD">RENDERS<br><span style="color: #F4F7FB; font-size: 13px">3 VIEWS</span></div>
+<div style="border: 1px solid #3A70C4; padding: 10px; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 11px; letter-spacing: 0.08em; color: #A9BEDD">3D MODEL<br><span style="color: #F4F7FB; font-size: 13px">X-RAY</span></div>
+<div style="border: 1px solid #3A70C4; padding: 10px; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 11px; letter-spacing: 0.08em; color: #A9BEDD">USE CASES<br><span style="color: #F4F7FB; font-size: 13px">3 LISTED</span></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<span style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; background: #FFB547; color: #1A1300; border-radius: 4px; font-weight: 600; font-size: 14px">View on pump.fun</span>
+<span style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border: 1px solid #3A70C4; border-radius: 4px; font-size: 14px">Product page</span>
+<span style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border: 1px solid #3A70C4; border-radius: 4px; font-size: 14px">X</span>
+</div>
+<figcaption style="font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 11px; letter-spacing: 0.1em; color: #A9BEDD">EXAMPLE &#183; FEE TO BLUEBUILD: 0</figcaption>
+</figure>
+</div>
 </section>
 
 <!-- DOCS -->
@@ -311,7 +364,7 @@ cd bluebuild
 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l16 16M20 4L4 20"></path></svg>
 Follow @bluebuild_AI</a>
 </div>
-<p style="margin: 0; max-width: 640px; font-size: 14px; line-height: 1.6; color: #A9BEDD">$BLUEBUILD is a community memecoin. It is not a share in Bluebuild, gives no rights to the software or any revenue, and carries no promise of returns. Only buy what you can afford to lose.</p>
+<p style="margin: 0; max-width: 640px; font-size: 14px; line-height: 1.6; color: #A9BEDD">$BLUEBUILD is a community memecoin. It is not a share in Bluebuild, gives no rights to the software or any revenue, and carries no promise of returns. Only buy what you can afford to lose. It is separate from the coins people launch for their own designs.</p>
 </section>
 
 <!-- FOOTER -->

@@ -1,19 +1,28 @@
 from __future__ import annotations
 
 import base64
+import io
 import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from apps.api import bluebuild_launchpad as launchpad
+from apps.api import bluebuild_pitch as pitch
 from apps.api import main
 from apps.api.auth import UserContext, optional_user_context, require_user_context
 
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+def _png() -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGBA", (16, 16), (255, 181, 71, 255)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+PNG = _png()
 PNG_DATA_URL = "data:image/png;base64," + base64.b64encode(PNG).decode("ascii")
 CREATOR = "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStELsSKCT4K2"
 MINT = "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R"
@@ -186,6 +195,36 @@ class LaunchpadEndpointTests(unittest.TestCase):
         )
         self.assertEqual(409, again.status_code)
 
+    def test_product_page_is_the_default_website_and_is_published_at_launch(self) -> None:
+        design = {
+            "overview": {"title": "Smart Bottle", "description": "Shows water temperature.", "estimated_cost": 24.5},
+            "requirements": {"requirements": ["Show temperature"], "power_needs": "LiPo battery", "operating_voltage": 3.3},
+            "mechanical": {"render_dimensions": {"x_mm": 75, "y_mm": 75, "z_mm": 270}, "enclosure_type": "Aluminium"},
+            "components": [{"ref_des": "U1", "name": "ESP32", "category": "Microcontroller"}],
+            "assembly": [{"step_num": 1}],
+            "assembly_metadata": {"product_visual_sequence": [{"view_id": "case", "label": "Front", "data": PNG_DATA_URL}]},
+        }
+        with patch("apps.api.main.get_project_endpoint", return_value={"project_ir": design}),                 patch("apps.api.bluebuild_pitch.write_pitch_copy", return_value={"tagline": "Know your water."}):
+            prepared = self.client.post(
+                "/launchpad/projects/project-1/prepare",
+                json=launch_payload(website=""),
+                headers={"Origin": "https://bluebuild.example"},
+            ).json()
+            metadata = self.client.get(prepared["metadata_uri"].removeprefix("http://testserver")).json()
+            self.assertEqual(f"https://bluebuild.example/coin/{MINT}", metadata["website"])
+            with patch.object(launchpad, "fetch_transaction", return_value=create_transaction(prepared["metadata_uri"])):
+                self.client.post(f"/launchpad/launches/{prepared['launch_id']}/confirm", json={"signature": SIGNATURE})
+
+        page = self.client.get(f"/launchpad/coins/{MINT}")
+        self.assertEqual(200, page.status_code, page.text)
+        pitch = page.json()["pitch"]
+        self.assertEqual("Smart Bottle", pitch["title"])
+        self.assertEqual("Know your water.", pitch["copy"]["tagline"])
+        self.assertIn({"label": "Size", "value": "75 × 75 × 270 mm"}, pitch["specs"])
+        self.assertEqual(1, len(pitch["images"]))
+        self.assertEqual(200, self.client.get(pitch["images"][0]["url"].removeprefix("http://testserver")).status_code)
+        self.assertEqual(404, self.client.get("/launchpad/coins/9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin").status_code)
+
     def test_disabled_launchpad_hides_the_button_and_refuses_launches(self) -> None:
         with patch.object(launchpad, "launchpad_enabled", return_value=False):
             status = self.client.get("/launchpad/projects/project-1").json()
@@ -207,6 +246,52 @@ class LaunchpadEndpointTests(unittest.TestCase):
             refused = self.client.post("/launchpad/rpc", json={"jsonrpc": "2.0", "id": 1, "method": "requestAirdrop"})
 
         self.assertEqual(403, refused.status_code)
+
+
+class ProductPageSnapshotTests(unittest.TestCase):
+    def test_snapshot_keeps_useful_facts_and_skips_empty_ones(self) -> None:
+        snapshot = pitch.snapshot_design({
+            "overview": {"title": "Lamp", "description": "A desk lamp.", "difficulty": "Easy"},
+            "requirements": {"requirements": ["Dimmable"], "operating_voltage": 0},
+            "components": [{"name": "LED"}, {"name": "LED"}, {"name": "ESP32", "category": "Microcontroller"}],
+        }, "p1")
+
+        self.assertEqual("Lamp", snapshot["title"])
+        self.assertEqual([{"name": "LED", "category": "", "count": 2}, {"name": "ESP32", "category": "Microcontroller", "count": 1}], snapshot["parts"])
+        self.assertNotIn("Operating voltage", [spec["label"] for spec in snapshot["specs"]])
+        self.assertIn({"label": "Parts", "value": "3"}, snapshot["specs"])
+
+    def test_images_are_re_encoded_and_bad_ones_skipped(self) -> None:
+        stored = {}
+
+        def put_file(key, content, content_type):
+            stored[key] = (content, content_type)
+            return f"https://cdn.example/{key}"
+
+        images = pitch.copy_pitch_images(
+            [{"source": PNG_DATA_URL, "label": "Front"},
+             {"source": "data:image/png;base64," + base64.b64encode(b"<html>").decode(), "label": "Bad"},
+             {"source": "https://evil.example/x.png", "label": "Remote"}],
+            put_file,
+            "launch-image",
+        )
+
+        self.assertEqual([{"url": "https://cdn.example/launch-image-1.png", "label": "Front"}], images)
+        self.assertEqual(["launch-image-1.png"], list(stored))
+
+    def test_copy_falls_back_to_none_when_the_model_fails(self) -> None:
+        def failing(prompt):
+            raise RuntimeError("no model")
+
+        self.assertIsNone(pitch.write_pitch_copy({"title": "Lamp"}, "LAMP", failing))
+
+    def test_copy_is_trimmed_from_the_model_output(self) -> None:
+        copy = pitch.write_pitch_copy({"title": "Lamp"}, "LAMP", lambda prompt: pitch.PitchCopy(
+            tagline="Light that follows you", pitch="A lamp.", highlights=["a"] * 9,
+            use_cases=[pitch.PitchUseCase(title="Reading", detail="At night.")],
+        ))
+        self.assertEqual(6, len(copy["highlights"]))
+        self.assertEqual([{"title": "Reading", "detail": "At night."}], copy["use_cases"])
 
 
 if __name__ == "__main__":

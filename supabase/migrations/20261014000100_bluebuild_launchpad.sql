@@ -26,6 +26,8 @@ create table if not exists public.bluebuild_coin_launches (
   initial_buy_sol numeric not null default 0,
   status text not null default 'prepared' check (status in ('prepared', 'launched', 'failed')),
   signature text,
+  -- Product page snapshot taken at launch (see apps/api/bluebuild_pitch.py).
+  pitch jsonb,
   hidden boolean not null default false,
   created_at timestamptz not null default now(),
   launched_at timestamptz
@@ -33,6 +35,8 @@ create table if not exists public.bluebuild_coin_launches (
 
 create index if not exists ix_bluebuild_coin_launches_project
   on public.bluebuild_coin_launches (project_id, status);
+create index if not exists ix_bluebuild_coin_launches_status
+  on public.bluebuild_coin_launches (status, launched_at desc);
 create index if not exists ix_bluebuild_coin_launches_owner_created
   on public.bluebuild_coin_launches (owner_user_id, created_at desc);
 -- One live coin per design.
@@ -43,6 +47,12 @@ create unique index if not exists ux_bluebuild_coin_launches_one_per_project
 alter table public.bluebuild_coin_launches enable row level security;
 grant select, insert, update, delete on public.bluebuild_coin_launches to service_role;
 
-insert into storage.buckets (id, name, public)
-values ('coin-metadata', 'coin-metadata', true)
-on conflict (id) do update set public = true;
+-- Public read; only the backend's service role writes (no storage policies grant
+-- uploads to anyone else). The bucket itself also refuses anything but small
+-- PNG/JPEG images and JSON metadata.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('coin-metadata', 'coin-metadata', true, 5242880, array['image/png', 'image/jpeg', 'application/json'])
+on conflict (id) do update set
+  public = true,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;

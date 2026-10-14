@@ -70,7 +70,6 @@ export function DesignCoinCard({ projectId, title, description, images }: Design
   }
   if (!status.can_launch) return null;
 
-  const designUrl = typeof window !== "undefined" ? `${window.location.origin}/project/${encodeURIComponent(projectId)}` : "";
   return (
     <section className="mt-5 flex flex-col gap-3 rounded-xl border border-[rgb(255_181_71/0.35)] bg-[rgb(255_181_71/0.06)] p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
@@ -86,7 +85,7 @@ export function DesignCoinCard({ projectId, title, description, images }: Design
       {open && (
         <LaunchCoinDialog
           projectId={projectId}
-          initialForm={defaultLaunchForm(title, description, designUrl)}
+          initialForm={defaultLaunchForm(title, description)}
           images={images}
           maxInitialBuySol={status.max_initial_buy_sol}
           getToken={getToken}
@@ -125,10 +124,20 @@ function LaunchedCoinCard({ coin }: { coin: LaunchedCoin }) {
         )}
         <p className="mt-1 text-[10px] text-[var(--forma-text-muted)]">Launched by the designer. Not endorsed by Bluebuild.</p>
       </div>
-      <a href={coin.pump_url} target="_blank" rel="noreferrer" className="connect-wallet-button shrink-0 justify-center">
-        View on pump.fun
-        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-      </a>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        {coin.product_page_path && (
+          <a
+            href={coin.product_page_path}
+            className="inline-flex h-11 items-center rounded-lg border border-[var(--forma-border)] px-4 text-sm font-medium text-[var(--forma-text-strong)] transition hover:border-[var(--forma-text-muted)]"
+          >
+            Product page
+          </a>
+        )}
+        <a href={coin.pump_url} target="_blank" rel="noreferrer" className="connect-wallet-button justify-center">
+          View on pump.fun
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      </div>
     </section>
   );
 }

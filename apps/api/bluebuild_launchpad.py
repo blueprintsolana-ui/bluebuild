@@ -17,8 +17,6 @@ unless BLUEBUILD_LAUNCHPAD=on; every limit is an environment variable (see
 
 from __future__ import annotations
 
-import base64
-import binascii
 import datetime as dt
 import json
 import logging
@@ -41,6 +39,7 @@ from starlette.concurrency import run_in_threadpool
 from apps.api.auth import UserContext, deployed_auth_required, optional_user_context, require_user_context
 from apps.api.bluebuild_tiers import BASE58_RE, _rpc, rpc_url, wallet_for_user
 from forma_core.config import config
+from forma_core.safe_images import UnsafeImageError, sanitize_inline_image
 
 
 logger = logging.getLogger(__name__)
@@ -64,11 +63,6 @@ SYMBOL_RE = re.compile(r"^[A-Z0-9]{1,10}$")
 HANDLE_RE = re.compile(r"^@?([A-Za-z0-9_]{1,15})$")
 TELEGRAM_HANDLE_RE = re.compile(r"^@?([A-Za-z0-9_]{5,32})$")
 SIGNATURE_RE = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{64,90}$")
-IMAGE_TYPES = {
-    b"\x89PNG\r\n\x1a\n": ("image/png", "png"),
-    b"\xff\xd8\xff": ("image/jpeg", "jpg"),
-    b"RIFF": ("image/webp", "webp"),
-}
 
 
 # ---------------------------------------------------------------- settings
@@ -175,20 +169,15 @@ def normalize_telegram(value: Any) -> Optional[str]:
 
 
 def decode_image(data_url: Any) -> tuple[bytes, str, str]:
+    """Verify and re-encode the logo so only clean PNG or JPEG pixels are ever published."""
     text = str(data_url or "")
-    match = re.match(r"^data:image/[a-z+.-]+;base64,(.+)$", text, re.DOTALL)
-    if not match:
+    if not text.startswith("data:image/"):
         raise LaunchValidationError("Choose a logo image for the coin.")
     try:
-        content = base64.b64decode(match.group(1), validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise LaunchValidationError("The logo image could not be read.") from exc
-    if len(content) > MAX_IMAGE_BYTES:
-        raise LaunchValidationError("The logo image is too large (1.5 MB maximum).")
-    for magic, (content_type, ext) in IMAGE_TYPES.items():
-        if content.startswith(magic) and (magic != b"RIFF" or content[8:12] == b"WEBP"):
-            return content, content_type, ext
-    raise LaunchValidationError("The logo must be a PNG, JPEG or WebP image.")
+        safe = sanitize_inline_image(text, max_bytes=MAX_IMAGE_BYTES, max_dimension=2048)
+    except UnsafeImageError as exc:
+        raise LaunchValidationError(str(exc)) from exc
+    return safe.content, safe.content_type, "png" if safe.content_type == "image/png" else "jpg"
 
 
 def normalize_launch(payload: Dict[str, Any]) -> LaunchDetails:
@@ -312,7 +301,7 @@ def fetch_transaction(signature: str) -> Optional[Dict[str, Any]]:
 
 LAUNCH_FIELDS = (
     "id", "project_id", "owner_user_id", "creator_wallet", "mint", "name", "symbol", "description", "website",
-    "twitter", "telegram", "image_url", "metadata_uri", "initial_buy_sol", "status", "signature", "hidden",
+    "twitter", "telegram", "image_url", "metadata_uri", "initial_buy_sol", "status", "signature", "pitch", "hidden",
     "created_at", "launched_at",
 )
 
@@ -337,6 +326,10 @@ class _SupabaseLaunchStore:
 
     def get(self, launch_id: str) -> Optional[Dict[str, Any]]:
         rows = self.client.table("bluebuild_coin_launches").select("*").eq("id", launch_id).limit(1).execute().data or []
+        return rows[0] if rows else None
+
+    def by_mint(self, mint: str) -> Optional[Dict[str, Any]]:
+        rows = self.client.table("bluebuild_coin_launches").select("*").eq("mint", mint).limit(1).execute().data or []
         return rows[0] if rows else None
 
     def for_project(self, project_id: str) -> List[Dict[str, Any]]:
@@ -383,7 +376,7 @@ class _SQLiteLaunchStore:
             connection.close()
 
     def file_path(self, key: str) -> Optional[str]:
-        if not re.match(r"^[0-9a-f-]{36}\.(png|jpg|webp|json)$", key):
+        if not re.match(r"^[0-9a-f-]{36}(-image-[0-9])?\.(png|jpg|json)$", key):
             return None
         path = os.path.join(self.directory, "files", key)
         return path if os.path.exists(path) else None
@@ -402,8 +395,12 @@ class _SQLiteLaunchStore:
             fields = [field for field in LAUNCH_FIELDS if field in row]
             db.execute(
                 f"insert into bluebuild_coin_launches ({', '.join(fields)}) values ({', '.join('?' for _ in fields)})",
-                [json.dumps(row[field]) if isinstance(row[field], bool) else row[field] for field in fields],
+                [self._encode(row[field]) for field in fields],
             )
+
+    @staticmethod
+    def _encode(value: Any) -> Any:
+        return json.dumps(value) if isinstance(value, (bool, dict, list)) else value
 
     @staticmethod
     def _row(row: sqlite3.Row) -> Dict[str, Any]:
@@ -411,7 +408,14 @@ class _SQLiteLaunchStore:
         record["hidden"] = record.get("hidden") in {"true", "1", 1, True}
         if record.get("initial_buy_sol") is not None:
             record["initial_buy_sol"] = float(record["initial_buy_sol"])
+        if isinstance(record.get("pitch"), str):
+            record["pitch"] = json.loads(record["pitch"])
         return record
+
+    def by_mint(self, mint: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as db:
+            row = db.execute("select * from bluebuild_coin_launches where mint=?", (mint,)).fetchone()
+        return self._row(row) if row else None
 
     def get(self, launch_id: str) -> Optional[Dict[str, Any]]:
         with self._connect() as db:
@@ -444,7 +448,10 @@ class _SQLiteLaunchStore:
                 ).fetchone():
                     raise RuntimeError("duplicate launched coin for project")
             assignments = ", ".join(f"{field}=?" for field in values)
-            db.execute(f"update bluebuild_coin_launches set {assignments} where id=?", [*values.values(), launch_id])
+            db.execute(
+                f"update bluebuild_coin_launches set {assignments} where id=?",
+                [*(self._encode(value) for value in values.values()), launch_id],
+            )
 
 
 _STORE: Any = None
@@ -494,6 +501,7 @@ def public_launch(record: Dict[str, Any]) -> Dict[str, Any]:
         "signature": record.get("signature"),
         "launched_at": record.get("launched_at"),
         "pump_url": f"https://pump.fun/coin/{record['mint']}",
+        "product_page_path": f"/coin/{record['mint']}",
     }
 
 
@@ -577,7 +585,10 @@ async def prepare_launch(project_id: str, request: Request, user: UserContext = 
         )
 
     launch_id = str(uuid.uuid4())
-    created_on = (request.headers.get("origin") or "").rstrip("/") or None
+    created_on = (request.headers.get("origin") or _env("BLUEBUILD_PUBLIC_SITE_URL") or "").rstrip("/") or None
+    if not details.website and created_on:
+        # The coin's website is its Bluebuild product page unless the creator gave their own.
+        details.website = f"{created_on}/coin/{details.mint}"
     try:
         image_url = await run_in_threadpool(
             db.put_file, f"{launch_id}.{details.image_ext}", details.image_bytes, details.image_type
@@ -656,7 +667,43 @@ async def confirm_launch(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "launch_exists", "message": "This design already has a coin recorded."},
         ) from exc
+    pitch = await run_in_threadpool(_build_product_page, {**record, **values}, user)
+    if pitch is not None:
+        values["pitch"] = pitch
     return {"status": "launched", "launch": public_launch({**record, **values})}
+
+
+def _build_product_page(record: Dict[str, Any], user: UserContext) -> Optional[Dict[str, Any]]:
+    """Snapshot the design into the coin's product page. A failure never undoes the launch."""
+    from apps.api.bluebuild_pitch import build_pitch
+    from apps.api.main import get_project_endpoint
+
+    db = store()
+    try:
+        ir = get_project_endpoint(record["project_id"], user).get("project_ir") or {}
+        pitch = build_pitch(
+            ir,
+            project_id=record["project_id"],
+            coin_name=record["name"],
+            put_file=db.put_file,
+            key_prefix=f"{record['id']}-image",
+        )
+        db.mark(record["id"], {"pitch": pitch})
+        return pitch
+    except Exception:
+        logger.exception("Product page snapshot failed for launch %s", record["id"])
+        return None
+
+
+@router.get("/launchpad/coins/{mint}")
+async def coin_product_page(mint: str) -> Dict[str, Any]:
+    """Public product page data for a launched coin."""
+    if not BASE58_RE.match(mint):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coin not found.")
+    record = await run_in_threadpool(store().by_mint, mint)
+    if not record or record["status"] != "launched" or record.get("hidden"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coin not found.")
+    return {"launch": public_launch(record), "pitch": record.get("pitch")}
 
 
 @router.post("/launchpad/rpc")

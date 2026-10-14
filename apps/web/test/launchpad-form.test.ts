@@ -11,11 +11,11 @@ test("tickers are short initials of the meaningful title words", () => {
 });
 
 test("the form starts from the design with optional links empty", () => {
-  const form = defaultLaunchForm("  A".padEnd(60, "x"), "Measures water.", "https://bluebuild.example/project/abc");
+  const form = defaultLaunchForm("  A".padEnd(60, "x"), "Measures water.");
 
   assert.equal(form.name.length, 32);
   assert.equal(form.description, "Measures water.");
-  assert.equal(form.website, "https://bluebuild.example/project/abc");
+  assert.equal(form.website, "");
   assert.equal(form.twitter, "");
   assert.equal(form.telegram, "");
   assert.equal(form.initialBuySol, "0");
