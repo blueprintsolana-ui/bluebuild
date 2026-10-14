@@ -15,8 +15,8 @@ export default function LegalFooter() {
     <footer className="border-t border-[#2c2f37] bg-[#181b22] px-5 py-8 font-sans text-slate-400">
       <div className="mx-auto grid w-full max-w-7xl gap-6 md:grid-cols-[1fr_2fr]">
         <div>
-          <Link href="/" className="text-sm font-semibold tracking-tight text-white">
-            Forma
+          <Link href="/app" className="text-sm font-semibold tracking-tight text-white">
+            Bluebuild
           </Link>
           <p className="mt-3 max-w-sm text-xs leading-5 text-slate-500">{legalEntityName}</p>
           <a

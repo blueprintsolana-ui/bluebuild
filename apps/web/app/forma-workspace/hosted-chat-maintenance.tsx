@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { ArrowRight, Eye, Terminal } from "lucide-react";
 
-export const HOSTED_CHAT_MAINTENANCE_MESSAGE = "Forma hosted chat is temporarily under maintenance.";
+export const HOSTED_CHAT_MAINTENANCE_MESSAGE = "Bluebuild hosted chat is temporarily under maintenance.";
 
-export const AUTHORING_MODE_ACTIVE_MESSAGE = "Forma Agent is authoring this workspace.";
+export const AUTHORING_MODE_ACTIVE_MESSAGE = "Bluebuild Agent is authoring this workspace.";
 
 export const AUTHORING_MODE_HANDOFF_MESSAGE =
-  "Routed to Forma Agent — this change is being authored by the runtime assigned to this workspace and will appear here when delivered.";
+  "Routed to Bluebuild Agent — this change is being authored by the runtime assigned to this workspace and will appear here when delivered.";
 
 const LOCAL_WORKFLOW_COMMANDS = `forma-oss init <local-project-directory>
 forma-oss build "<your hardware prompt>" --path <local-project-directory>
@@ -33,8 +33,8 @@ export default function HostedChatMaintenance({ compact = false }: { compact?: b
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-zinc-100">{HOSTED_CHAT_MAINTENANCE_MESSAGE}</h2>
           <p className="mt-1.5 text-xs leading-5 text-zinc-400">
-            You can still view existing chats. Create and validate your project locally with Forma-OSS,
-            then upload it to Forma Cloud when you want to view or share it online.
+            You can still view existing chats. Create and validate your project locally with Bluebuild-OSS,
+            then upload it to Bluebuild when you want to view or share it online.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Link
@@ -77,7 +77,7 @@ export function AuthoringModeBanner({ compact = false }: { compact?: boolean }) 
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-zinc-100">{AUTHORING_MODE_ACTIVE_MESSAGE}</h2>
           <p className="mt-1.5 text-xs leading-5 text-zinc-400">
-            Change requests are routed to your assigned Forma Agent. The updated project will appear here after
+            Change requests are routed to your assigned Bluebuild Agent. The updated project will appear here after
             delivery.
           </p>
         </div>

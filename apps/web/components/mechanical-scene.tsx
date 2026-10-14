@@ -1415,7 +1415,7 @@ function PlacementMechanicalScene({
             )}
 
             <div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--forma-text-muted)]">
-              <span>{activeMotion.targetRef} / {activeMotion.type === "compliant" ? "Forma preview" : "OpenCAD"}</span>
+              <span>{activeMotion.targetRef} / {activeMotion.type === "compliant" ? "Bluebuild preview" : "OpenCAD"}</span>
               <span>{openCadMotionRangeLabel(activeMotion)}</span>
             </div>
 

@@ -162,7 +162,7 @@ const IMAGE_PROVIDER_OPTIONS: ImageProviderOption[] = [
       "image_gated_models_enabled",
       "image_timeout_seconds",
     ],
-    summary: "Hosted Hugging Face image inference. Add a scoped HF token; Forma preselects FLUX.",
+    summary: "Hosted Hugging Face image inference. Add a scoped HF token; Bluebuild preselects FLUX.",
     tier: "advanced",
   },
   {
@@ -209,7 +209,7 @@ const IMAGE_PROVIDER_OPTIONS: ImageProviderOption[] = [
     credentialFieldIds: ["api_key", "project_key_confirmation"],
     configFieldIds: ["image_model"],
     advancedFieldIds: ["image_base_url", "image_size", "image_steps", "image_output_format", "image_timeout_seconds"],
-    summary: "Together AI image generation. Add a project-scoped key dedicated to Forma.",
+    summary: "Together AI image generation. Add a project-scoped key dedicated to Bluebuild.",
     tier: "advanced",
   },
   {
@@ -718,10 +718,10 @@ function confirmationLabel(integration: IntegrationStatus, field: IntegrationFie
     return "I confirm this is a fine-grained Hugging Face token with only Make calls to Inference Providers, or an enterprise service-account token with equivalent scope.";
   }
   if (integration.id === "gmi" && field.id === "key_delegation_confirmation") {
-    return "I confirm this GMI key is scoped to a dedicated project or organization and may be stored server-side by Forma for requests from my account.";
+    return "I confirm this GMI key is scoped to a dedicated project or organization and may be stored server-side by Bluebuild for requests from my account.";
   }
   if (integration.id === "together" && field.id === "project_key_confirmation") {
-    return "I confirm this Together AI key is project-scoped, dedicated to Forma, and not a legacy or broad account key.";
+    return "I confirm this Together AI key is project-scoped, dedicated to Bluebuild, and not a legacy or broad account key.";
   }
   return "I confirm this credential is scoped for this integration and does not include broad account, repository, organization, billing, deployment, or unrestricted access.";
 }
@@ -771,7 +771,7 @@ async function responseErrorMessage(response: Response, fallback: string) {
 }
 
 function fieldPlaceholder(field: IntegrationFieldStatus) {
-  if (field.policy_blocked) return "Not accepted in Forma Cloud";
+  if (field.policy_blocked) return "Not accepted in Bluebuild";
   if (field.secret && field.masked_value) return `Saved: ${field.masked_value}`;
   return field.placeholder || "";
 }
@@ -1371,7 +1371,7 @@ function IntegrationFieldEditor({
 }) {
   const confirmationField = isConfirmationField(field);
   const placeholder = field.policy_blocked
-    ? "Not accepted in Forma Cloud"
+    ? "Not accepted in Bluebuild"
     : field.secret && field.masked_value
     ? `Saved: ${field.masked_value}`
     : field.placeholder || field.env_names[0] || "";
@@ -1628,9 +1628,9 @@ function ThemeSettingsPanel() {
     },
     {
       id: "solarized-dark",
-      label: "Solarized Dark+",
+      label: "Bluebuild Drafting",
       badge: "Night default",
-      description: "Deep cyan #002b36 base & #001f26 panels with rich syntax colors.",
+      description: "Drafting blue #14366E with white line work and amber accents.",
       icon: Moon,
       previewStyle: {
         backgroundColor: solarizedDark.base03,
@@ -1656,7 +1656,7 @@ function ThemeSettingsPanel() {
     <article className={CARD_SURFACE_CLASS}>
       <SettingsPaneHeader
         title="Appearance"
-        description="Choose how Forma looks in this browser. Changes apply immediately across the workspace."
+        description="Choose how Bluebuild looks in this browser. Changes apply immediately across the workspace."
         badges={
           <div className="flex items-center gap-2">
             <SettingsNavBadge tone="allowed">Browser preference</SettingsNavBadge>
@@ -1689,8 +1689,8 @@ function ThemeSettingsPanel() {
               </div>
               <p className="mt-0.5 text-xs text-slate-400">
                 {themeMode === "auto" && solarInfo
-                  ? `Switches to ${solarInfo.nextEvent === "sunset" ? "Solarized Dark+" : "Solarized Light+"} automatically at ${formatTime(solarInfo.nextTime)}.`
-                  : "Automatically switches between Solarized Light+ by day and Solarized Dark+ at night based on your local sunrise & sunset."}
+                  ? `Switches to ${solarInfo.nextEvent === "sunset" ? "Bluebuild Drafting" : "Solarized Light+"} automatically at ${formatTime(solarInfo.nextTime)}.`
+                  : "Automatically switches between Solarized Light+ by day and Bluebuild Drafting at night based on your local sunrise & sunset."}
               </p>
             </div>
           </div>
@@ -2395,7 +2395,7 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
         <header className="workspace-chrome-header px-4 pb-5 pt-2">
           <div className="mx-auto flex w-full max-w-7xl items-center gap-3">
             <Link
-              href="/"
+              href="/app"
               className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-100"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -2431,7 +2431,7 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
                 Sign in
               </button>
               {embedded ? null : (
-                <Link href="/" className={BUTTON_OUTLINE_CLASS}>
+                <Link href="/app" className={BUTTON_OUTLINE_CLASS}>
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Home
                 </Link>
@@ -2609,7 +2609,7 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
 
                 <SettingsCollapsible title="How opt-outs are tracked">
                   <p>
-                    Forma stores the account owner ID, an opt-out flag, and created/updated timestamps. Dataset export jobs must exclude every owner ID whose opt-out flag is set, and eligibility never replaces a project-specific consent record.
+                    Bluebuild stores the account owner ID, an opt-out flag, and created/updated timestamps. Dataset export jobs must exclude every owner ID whose opt-out flag is set, and eligibility never replaces a project-specific consent record.
                   </p>
                 </SettingsCollapsible>
               </div>

@@ -107,9 +107,9 @@ export type OpenCodeEvent = {
 
 export function openCodeDesignNotice(readiness: unknown): string | null {
   if (readiness === "complete") return null;
-  if (readiness === "draft") return "Draft saved only. No populated hardware design was produced. Ask Forma Agent to add components, pins, and wiring, then compile and resolve validation findings.";
+  if (readiness === "draft") return "Draft saved only. No populated hardware design was produced. Ask Bluebuild Agent to add components, pins, and wiring, then compile and resolve validation findings.";
   if (readiness === "partial") return "An incomplete design was saved. Review its wiring and validation findings before treating it as a completed design.";
-  return "Forma Agent finished responding, but a completed design has not been verified.";
+  return "Bluebuild Agent finished responding, but a completed design has not been verified.";
 }
 
 type OpenCodeEventPage = {
@@ -133,7 +133,7 @@ export function reduceOpenCodeTurn(
   if (event.kind === "connector_unavailable") {
     return {
       ...state,
-      content: state.assistantMessage || "Waiting for Forma Agent to reconnect. You can stop this request at any time.",
+      content: state.assistantMessage || "Waiting for Bluebuild Agent to reconnect. You can stop this request at any time.",
     };
   }
   if (event.kind === "assistant_message" && event.message) {
@@ -144,10 +144,10 @@ export function reduceOpenCodeTurn(
     if (event.event_id !== `${commandId}:terminal` && event.event_id !== `cancelled_${event.session_id}`) return state;
     const status = event.kind === "completed" ? "success" : event.kind === "failed" ? "error" : "cancelled";
     let content = event.kind === "completed"
-      ? state.assistantMessage || "Forma Agent finished responding."
+      ? state.assistantMessage || "Bluebuild Agent finished responding."
       : event.kind === "failed"
-        ? event.error?.message || "Forma Agent could not complete this request."
-         : "Forma Agent was stopped.";
+        ? event.error?.message || "Bluebuild Agent could not complete this request."
+         : "Bluebuild Agent was stopped.";
     if (event.kind === "failed" && ["connector_timeout", "opencode_command_stalled", "opencode_lease_expired"].includes(event.error?.code || "")) {
       content += `\n\nCode: ${event.error?.code}`;
     }
@@ -161,32 +161,32 @@ export function reduceOpenCodeTurn(
   return {
     ...state,
     content: state.assistantMessage || (event.kind === "validating"
-      ? "Forma Agent is validating the project."
-      : "Forma Agent is working on your request."),
+      ? "Bluebuild Agent is validating the project."
+      : "Bluebuild Agent is working on your request."),
   };
 }
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("Forma Agent returned an invalid response.");
+    throw new Error("Bluebuild Agent returned an invalid response.");
   }
   return value as Record<string, unknown>;
 }
 
 function stringField(value: Record<string, unknown>, name: string): string {
-  if (typeof value[name] !== "string" || !value[name]) throw new Error("Forma Agent returned an invalid response.");
+  if (typeof value[name] !== "string" || !value[name]) throw new Error("Bluebuild Agent returned an invalid response.");
   return value[name];
 }
 
 function nullableStringField(value: Record<string, unknown>, name: string): string | null {
-  if (value[name] !== null && typeof value[name] !== "string") throw new Error("Forma Agent returned an invalid response.");
+  if (value[name] !== null && typeof value[name] !== "string") throw new Error("Bluebuild Agent returned an invalid response.");
   return (value[name] as string | null | undefined) ?? null;
 }
 
 function parseSession(value: unknown): OpenCodeSession {
   const item = record(value);
   const status = stringField(item, "status");
-  if (status !== "active" && status !== "cancelled" && status !== "completed" && status !== "failed") throw new Error("Forma Agent returned an invalid session status.");
+  if (status !== "active" && status !== "cancelled" && status !== "completed" && status !== "failed") throw new Error("Bluebuild Agent returned an invalid session status.");
   return {
     session_id: stringField(item, "session_id"),
     connector_id: stringField(item, "connector_id"),
@@ -200,8 +200,8 @@ function parseCommand(value: unknown): OpenCodeCommand {
   const item = record(value);
   const operation = stringField(item, "operation");
   const status = stringField(item, "status");
-  if (!["project_message", "compile_project", "validate_project"].includes(operation)) throw new Error("Forma Agent returned an invalid command operation.");
-  if (!["queued", "leased", "running", "succeeded", "failed", "cancelled"].includes(status)) throw new Error("Forma Agent returned an invalid command status.");
+  if (!["project_message", "compile_project", "validate_project"].includes(operation)) throw new Error("Bluebuild Agent returned an invalid command operation.");
+  if (!["queued", "leased", "running", "succeeded", "failed", "cancelled"].includes(status)) throw new Error("Bluebuild Agent returned an invalid command status.");
   return {
     command_id: stringField(item, "command_id"),
     model: typeof item.model === "string" ? normalizeOpenCodeModel(item.model) : null,
@@ -216,13 +216,13 @@ function parseEvent(value: unknown): OpenCodeEvent {
   const item = record(value);
   const kind = stringField(item, "kind");
   if (!["assistant_message", "queued", "working", "validating", "completed", "failed", "cancelled", "connector_unavailable", "progress"].includes(kind)) {
-    throw new Error("Forma Agent returned an invalid event kind.");
+    throw new Error("Bluebuild Agent returned an invalid event kind.");
   }
   const status = item.status === null || item.status === undefined ? null : stringField(item, "status");
-  if (status !== null && !["queued", "leased", "running", "succeeded", "failed", "cancelled"].includes(status)) throw new Error("Forma Agent returned an invalid event status.");
+  if (status !== null && !["queued", "leased", "running", "succeeded", "failed", "cancelled"].includes(status)) throw new Error("Bluebuild Agent returned an invalid event status.");
   const errorValue = item.error === null || item.error === undefined ? null : record(item.error);
   const outcome = item.design_outcome == null ? null : record(item.design_outcome);
-  if (outcome && !["draft", "partial", "complete"].includes(String(outcome.project_readiness))) throw new Error("Forma Agent returned an invalid design outcome.");
+  if (outcome && !["draft", "partial", "complete"].includes(String(outcome.project_readiness))) throw new Error("Bluebuild Agent returned an invalid design outcome.");
   return {
     event_id: stringField(item, "event_id"),
     sequence: Number(item.sequence),
@@ -251,7 +251,7 @@ async function responseJson(response: Response): Promise<unknown> {
     const message = detail && typeof detail === "object" && detail !== null && "message" in detail
       ? (detail as { message?: unknown }).message
       : null;
-    throw new Error(typeof message === "string" ? message : "Forma Agent request failed.");
+    throw new Error(typeof message === "string" ? message : "Bluebuild Agent request failed.");
   }
   return response.json();
 }

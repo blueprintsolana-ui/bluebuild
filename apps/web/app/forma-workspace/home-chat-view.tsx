@@ -175,7 +175,7 @@ export default function HomeChatView({
               renderPipelineProgress={renderPipelineProgress}
               onSelectContextSuggestion={readOnly ? undefined : onSelectContextSuggestion}
               isLoading={readOnly ? false : isLoading}
-              assistantLabel={authoringActive ? "Forma Agent" : "Forma"}
+              assistantLabel={authoringActive ? "Bluebuild Agent" : "Bluebuild"}
               canBuildNow={readOnly ? false : canBuildNow}
               buildNowLoading={readOnly ? false : buildNowLoading}
               onBuildNow={readOnly ? undefined : onBuildNow}
@@ -261,7 +261,7 @@ export default function HomeChatView({
           {notice && (
             <div id="generation-input-notice" role="status" className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-              <span className="break-anywhere min-w-0 flex-1">{notice.replace(/\bOpenCode\b/g, "Forma Agent")}</span>
+              <span className="break-anywhere min-w-0 flex-1">{notice.replace(/\bOpenCode\b/g, "Bluebuild Agent")}</span>
             </div>
           )}
 
@@ -298,7 +298,7 @@ export default function HomeChatView({
                 selectedImage
                   ? "Add constraints, references, or what you want from this image…"
                   : selectedDocumentName
-                    ? "Tell Forma what to build or what to use from this PDF…"
+                    ? "Tell Bluebuild what to build or what to use from this PDF…"
                     : "Describe the product, constraints, references, and outputs you need…"
               }
               aria-invalid={Boolean(notice)}

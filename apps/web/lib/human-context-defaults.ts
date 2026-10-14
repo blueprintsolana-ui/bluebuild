@@ -29,7 +29,7 @@ export function humanContextSkipChatSummary(
   finalNotes = "",
 ) {
   const lines = [
-    "Skipped optional clarification questions. Forma will infer missing details from the project context and record them as assumptions.",
+    "Skipped optional clarification questions. Bluebuild will infer missing details from the project context and record them as assumptions.",
     ...questions.map((question) => `- ${question.label}: skipped`),
   ];
   if (finalNotes.trim()) {

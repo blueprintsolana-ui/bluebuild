@@ -48,18 +48,13 @@ function GitHubMark({ className }: { className?: string }) {
 
 const companyLinks = [
   {
-    href: "https://www.linkedin.com/company/ca-id",
-    label: "CAID Technologies on LinkedIn",
-    icon: <LinkedInMark className="h-3.5 w-3.5" />,
+    href: "https://x.com/bluebuild_AI",
+    label: "Bluebuild on X",
+    icon: <span className="text-[11px] font-semibold leading-none">X</span>,
   },
   {
-    href: "https://huggingface.co/caid-technologies",
-    label: "CAID Technologies on Hugging Face",
-    icon: <ProviderMark id="huggingface" className="h-4 w-4" />,
-  },
-  {
-    href: "https://github.com/caid-technologies",
-    label: "CAID Technologies on GitHub",
+    href: "[GITHUB REPO LINK]",
+    label: "Bluebuild on GitHub",
     icon: <GitHubMark className="h-3.5 w-3.5" />,
   },
 ];
@@ -102,8 +97,8 @@ export default function AboutView() {
         <article className={CARD_SURFACE_CLASS}>
           <AboutPaneHeader
             eyebrow={legalEntityName}
-            title="Forma"
-            description="Forma helps builders turn early hardware ideas into project plans with parts, wiring, validation, build notes, and generated artifacts."
+            title="Bluebuild"
+            description="Bluebuild helps builders turn early hardware ideas into project plans with parts, wiring, validation, build notes, and generated artifacts. Bluebuild is an independent open-source project built on Form by CAID Technologies (MPL-2.0). Not affiliated with Blueprint.io."
             actions={
               <>
                 <Link href="/install/opencode" className={BUTTON_OUTLINE_CLASS}>
@@ -151,7 +146,7 @@ export default function AboutView() {
               <div className="min-w-0">
                 <h3 className="text-sm font-medium text-zinc-100">Safety first</h3>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Forma keeps safety constraints, validation notes, and known unknowns visible in the workflow.
+                  Bluebuild keeps safety constraints, validation notes, and known unknowns visible in the workflow.
                 </p>
               </div>
             </div>
@@ -196,7 +191,7 @@ export default function AboutView() {
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-semibold tracking-tight text-white">Legal</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Terms, privacy, safety, and acceptable-use documents for Forma.
+                  Terms, privacy, safety, and acceptable-use documents for Bluebuild.
                 </p>
               </div>
             </summary>

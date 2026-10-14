@@ -13,14 +13,14 @@ function model(value: string, label: string, detail?: string, group?: string): P
 // so every model picker also accepts an arbitrary provider model ID.
 export const LLM_MODEL_OPTIONS: Record<string, ProviderModelOption[]> = {
   anthropic: [
-    model("claude-opus-5", "Claude Opus 5", "Forma default; complex agentic and coding work"),
+    model("claude-opus-5", "Claude Opus 5", "Bluebuild default; complex agentic and coding work"),
     model("claude-fable-5", "Claude Fable 5", "Most capable widely available Claude model"),
     model("claude-opus-4-8", "Claude Opus 4.8", "Previous-generation Opus"),
     model("claude-sonnet-5", "Claude Sonnet 5", "Balanced intelligence and speed"),
     model("claude-haiku-4-5", "Claude Haiku 4.5", "Fast, cost-efficient Claude model"),
   ],
   gemini: [
-    model("gemini-3.7-flash", "Gemini 3.7 Flash", "Forma default; agentic and multimodal workloads"),
+    model("gemini-3.7-flash", "Gemini 3.7 Flash", "Bluebuild default; agentic and multimodal workloads"),
     model("gemini-3.5-flash", "Gemini 3.5 Flash", "Coding and sustained agentic tasks"),
     model("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", "High-throughput, cost-efficient tasks"),
     model("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", "Fast general-purpose model"),
@@ -28,7 +28,7 @@ export const LLM_MODEL_OPTIONS: Record<string, ProviderModelOption[]> = {
     model("gemini-2.5-flash", "Gemini 2.5 Flash", "Stable previous-generation flash model"),
   ],
   vertex: [
-    model("gemini-3.7-flash", "Gemini 3.7 Flash", "Forma default; Vertex AI agentic and multimodal workloads"),
+    model("gemini-3.7-flash", "Gemini 3.7 Flash", "Bluebuild default; Vertex AI agentic and multimodal workloads"),
     model("gemini-3.5-flash", "Gemini 3.5 Flash", "Vertex AI coding and sustained agentic tasks"),
     model("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", "Vertex AI high-throughput workloads"),
     model("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", "Vertex AI fast general-purpose model"),
@@ -50,7 +50,7 @@ export const LLM_MODEL_OPTIONS: Record<string, ProviderModelOption[]> = {
     model("openai/gpt-oss-120b", "GPT-OSS 120B"),
   ],
   gmi: [
-    model("anthropic/claude-fable-5", "Claude Fable 5", "Forma default; availability depends on your GMI organization"),
+    model("anthropic/claude-fable-5", "Claude Fable 5", "Bluebuild default; availability depends on your GMI organization"),
     model("deepseek-ai/DeepSeek-R1", "DeepSeek R1", "GMI API reference example; check your organization's live model list"),
   ],
   huggingface: [
@@ -61,7 +61,7 @@ export const LLM_MODEL_OPTIONS: Record<string, ProviderModelOption[]> = {
     model("Qwen/Qwen3.5-9B", "Qwen 3.5 9B", "Inference Providers"),
     model("openai/gpt-oss-120b", "GPT-OSS 120B", "Inference Providers"),
     model("meta-llama/Llama-3.3-70B-Instruct", "Llama 3.3 70B Instruct", "Inference Providers"),
-    model("Qwen/Qwen2.5-Coder-3B-Instruct:nscale", "Qwen 2.5 Coder 3B", "Forma legacy default via Nscale"),
+    model("Qwen/Qwen2.5-Coder-3B-Instruct:nscale", "Qwen 2.5 Coder 3B", "Bluebuild legacy default via Nscale"),
   ],
   cloudflare: [
     model("@cf/google/gemma-4-26b-a4b-it", "Gemma 4 26B A4B", "Cloudflare Workers AI free tier; reasoning and vision"),
@@ -85,7 +85,7 @@ export const LLM_MODEL_OPTIONS: Record<string, ProviderModelOption[]> = {
     model("deepseek-ai/DeepSeek-R1", "DeepSeek R1"),
   ],
   runpod: [
-    model("caid-technologies/parti-base", "Parti Base", "Forma Runpod deployment"),
+    model("caid-technologies/parti-base", "Parti Base", "Bluebuild Runpod deployment"),
   ],
   ollama: [
     model("qwen3:0.6b", "Qwen 3 0.6B"),

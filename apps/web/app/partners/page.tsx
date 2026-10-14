@@ -9,8 +9,8 @@ import PublicAppShell, {
 import { aboutMarqueePartners, partners } from "../../lib/partners";
 
 export const metadata: Metadata = {
-  title: "Partners | Forma",
-  description: "Forma partners and infrastructure collaborators.",
+  title: "Partners | Bluebuild",
+  description: "Bluebuild partners and infrastructure collaborators.",
 };
 
 export default function PartnersPage() {
@@ -64,7 +64,7 @@ export default function PartnersPage() {
               <h2 className="text-lg font-semibold tracking-tight text-white">Network</h2>
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              Program and research partners around Forma.
+              Program and research partners around Bluebuild.
             </p>
           </div>
           <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">

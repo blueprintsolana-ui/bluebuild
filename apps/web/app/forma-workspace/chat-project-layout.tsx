@@ -220,7 +220,7 @@ export function ChatProjectSurface({ title, children, leading, projectId, shareT
           <div className={styles.surfaceTitle}>{title}</div>
         </div>
         <div className={styles.actions} role="group" aria-label="Project surface">
-          {projectId && <ShareProjectButton projectId={projectId} title={shareTitle || "Forma project"} isPrivate={isPrivate} />}
+          {projectId && <ShareProjectButton projectId={projectId} title={shareTitle || "Bluebuild project"} isPrivate={isPrivate} />}
           <ProjectHistoryButton />
           {workspace && (
             <>

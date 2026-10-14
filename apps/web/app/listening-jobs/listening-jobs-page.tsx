@@ -232,7 +232,7 @@ export default function ListeningJobsPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <Link
-              href="/"
+              href="/app"
               className="inline-flex h-10 shrink-0 items-center gap-2 border border-[#2a2c33] px-3 text-xs font-black uppercase text-slate-400 hover:bg-white hover:text-black"
             >
               <ArrowLeft className="h-4 w-4" />

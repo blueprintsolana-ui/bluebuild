@@ -64,22 +64,22 @@ export const solarizedLight = {
  */
 export const solarizedDark = {
   /** Primary background (editor/page base03). */
-  base03: "#002b36",
+  base03: "#14366E",
   /** Dark teal surface tone (sidebar, panels, chrome). */
-  base04: "#001f26",
+  base04: "#0E2A57",
   /** Recessed surface and input background. */
-  base02: "#073642",
+  base02: "#1C4A91",
   /** Subtle border and secondary tone. */
-  base01: "#586e75",
+  base01: "#3A70C4",
   /** Muted text and structural borders. */
-  base00: "#657b83",
+  base00: "#8AA3C8",
   /** Primary body text tone. */
-  base0: "#839496",
+  base0: "#C9D7EC",
   /** Secondary content tone. */
-  base1: "#93a1a1",
+  base1: "#A9BEDD",
   /** Brightest emphasis tone. */
-  base3: "#fdf6e3",
-  cyan: "#2aa198",
+  base3: "#F4F7FB",
+  cyan: "#7FB2FF",
   green: "#859900",
   yellow: "#b58900",
   red: "#dc322f",
@@ -94,7 +94,7 @@ export const solarizedDark = {
  * in Solarized Light are scaled down in linear RGB until they clear 4.5:1.
  */
 export const solarizedPublishedAccents = {
-  cyan: "#2aa198",
+  cyan: "#7FB2FF",
   green: "#859900",
   yellow: "#b58900",
   red: "#dc322f",

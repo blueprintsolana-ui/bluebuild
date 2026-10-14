@@ -18,7 +18,7 @@ export async function generateMetadata(props: LegalDocumentPageProps): Promise<M
   const document = getLegalDocument(params.slug);
   if (!document) return {};
   return {
-    title: `${document.title} | Forma`,
+    title: `${document.title} | Bluebuild`,
     description: document.summary,
   };
 }

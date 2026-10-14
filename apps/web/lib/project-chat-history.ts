@@ -40,7 +40,7 @@ export async function loadProjectChatHistory({
   const history = await fetch(`${apiUrl}/opencode/projects/${encodeURIComponent(projectId)}/history`, {
     headers, signal, cache: "no-store",
   });
-  if (!history.ok) throw new Error("Recorded Forma Agent history could not be loaded.");
+  if (!history.ok) throw new Error("Recorded Bluebuild Agent history could not be loaded.");
   const result = await history.json();
   return Array.isArray(result?.messages) ? result.messages : [];
 }

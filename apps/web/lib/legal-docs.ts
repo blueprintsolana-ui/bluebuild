@@ -1,5 +1,5 @@
-export const legalContactEmail = "team@caid-technologies.com";
-export const legalEntityName = "CAID TECHNOLOGIES, INC.";
+export const legalContactEmail = "[YOUR CONTACT EMAIL]";
+export const legalEntityName = "BLUEBUILD";
 export const legalLastUpdated = "July 31, 2026";
 export const legalEffectiveDate = "July 8, 2026";
 
@@ -20,12 +20,12 @@ export const legalDocuments: LegalDocument[] = [
   {
     slug: "terms-of-service",
     title: "Terms of Service",
-    summary: "The terms that govern access to and use of Forma.",
+    summary: "The terms that govern access to and use of Bluebuild.",
     sections: [
       {
         heading: "The Service",
         paragraphs: [
-          "Forma is an AI-assisted tool for generating low-voltage maker electronics project information, including structured hardware descriptions, parts lists, wiring notes, validation warnings, assembly notes, diagrams, and concept images.",
+          "Bluebuild is an AI-assisted tool for generating low-voltage maker electronics project information, including structured hardware descriptions, parts lists, wiring notes, validation warnings, assembly notes, diagrams, and concept images.",
           "Generated content can be incomplete, inaccurate, unsafe, non-unique, or unsuitable for a particular purpose. You are responsible for independent review, testing, and professional validation before building, purchasing parts for, manufacturing, selling, or deploying any generated design.",
         ],
       },
@@ -39,19 +39,19 @@ export const legalDocuments: LegalDocument[] = [
         heading: "Accounts, Content, and Outputs",
         paragraphs: [
           "You are responsible for activity under your account and for keeping credentials, API keys, integration tokens, and devices secure.",
-          "You grant Forma permission to host, store, reproduce, process, transmit, display, and use prompts, uploads, project data, and related content as needed to provide, secure, improve, and support the Service.",
-          "As between you and Forma, you may use generated outputs for lawful purposes, subject to these terms and applicable third-party rights or provider terms.",
+          "You grant Bluebuild permission to host, store, reproduce, process, transmit, display, and use prompts, uploads, project data, and related content as needed to provide, secure, improve, and support the Service.",
+          "As between you and Bluebuild, you may use generated outputs for lawful purposes, subject to these terms and applicable third-party rights or provider terms.",
         ],
       },
       {
         heading: "Hardware Safety",
         paragraphs: [
-          "Forma is not a substitute for professional engineering review, certified electrical design, laboratory testing, safety certification, legal advice, medical advice, or product compliance work.",
+          "Bluebuild is not a substitute for professional engineering review, certified electrical design, laboratory testing, safety certification, legal advice, medical advice, or product compliance work.",
         ],
         bullets: [
-          "Do not use Forma for mains AC, high-voltage, high-current, or unsafe battery systems without qualified professional oversight.",
-          "Do not use Forma for weapons, harmful devices, medical devices, automotive systems, aviation systems, industrial controls, public infrastructure, or other safety-critical systems.",
-          "Do not sell or deploy products based on Forma outputs without qualified engineering, regulatory, and safety review.",
+          "Do not use Bluebuild for mains AC, high-voltage, high-current, or unsafe battery systems without qualified professional oversight.",
+          "Do not use Bluebuild for weapons, harmful devices, medical devices, automotive systems, aviation systems, industrial controls, public infrastructure, or other safety-critical systems.",
+          "Do not sell or deploy products based on Bluebuild outputs without qualified engineering, regulatory, and safety review.",
         ],
       },
       {
@@ -63,8 +63,8 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "Disclaimers and Liability",
         paragraphs: [
-          "The Service and outputs are provided as is and as available. To the maximum extent permitted by law, Forma disclaims warranties of merchantability, fitness for a particular purpose, title, non-infringement, accuracy, safety, availability, and quiet enjoyment.",
-          "To the maximum extent permitted by law, Forma will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, lost data, business interruption, personal injury, property damage, product liability, or cost of substitute services.",
+          "The Service and outputs are provided as is and as available. To the maximum extent permitted by law, Bluebuild disclaims warranties of merchantability, fitness for a particular purpose, title, non-infringement, accuracy, safety, availability, and quiet enjoyment.",
+          "To the maximum extent permitted by law, Bluebuild will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, lost data, business interruption, personal injury, property damage, product liability, or cost of substitute services.",
         ],
       },
       {
@@ -76,7 +76,7 @@ export const legalDocuments: LegalDocument[] = [
   {
     slug: "privacy-policy",
     title: "Privacy Policy",
-    summary: "How Forma collects, uses, shares, and protects information.",
+    summary: "How Bluebuild collects, uses, shares, and protects information.",
     sections: [
       {
         heading: "Information We Collect",
@@ -97,7 +97,7 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "AI Providers",
         paragraphs: [
-          "Forma may send prompts, uploaded images, project content, and related metadata to AI model providers, image generation providers, hosting providers, or compatible infrastructure selected or configured for a generation request.",
+          "Bluebuild may send prompts, uploaded images, project content, and related metadata to AI model providers, image generation providers, hosting providers, or compatible infrastructure selected or configured for a generation request.",
           "Provider data practices may vary. Review provider terms and privacy policies before using live model, image, storage, or infrastructure providers.",
         ],
       },
@@ -146,14 +146,14 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "Separate and Optional Choice",
         paragraphs: [
-          "Project contribution is optional, off by default, and separate from deleting a project or accepting the general Terms of Service. Declining does not limit core Forma functionality.",
+          "Project contribution is optional, off by default, and separate from deleting a project or accepting the general Terms of Service. Declining does not limit core Bluebuild functionality.",
           "Your recorded consent identifies the policy version and the permitted purposes. Materially expanded uses require renewed consent.",
         ],
       },
       {
         heading: "What Is Retained",
         paragraphs: [
-          "Forma retains only an aggregate hardware summary produced by the documented sanitization process. It excludes prompts, project titles, account and workspace identifiers, names, email and IP addresses, credentials, connection strings, repository information, URLs, uploads, file metadata, request metadata, and other free text.",
+          "Bluebuild retains only an aggregate hardware summary produced by the documented sanitization process. It excludes prompts, project titles, account and workspace identifiers, names, email and IP addresses, credentials, connection strings, repository information, URLs, uploads, file metadata, request metadata, and other free text.",
           "The sanitized contribution is not made public, sold, or licensed to third parties under these terms.",
         ],
       },
@@ -168,7 +168,7 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "Ownership and Limited License",
         paragraphs: [
-          "You retain ownership of content you own. You grant CAID Technologies a non-exclusive, worldwide, royalty-free license to process the sanitized contribution solely for the purposes listed in your recorded consent.",
+          "You retain ownership of content you own. You grant Bluebuild a non-exclusive, worldwide, royalty-free license to process the sanitized contribution solely for the purposes listed in your recorded consent.",
           "You represent that you have the right to contribute the content. Do not contribute employer-confidential information or third-party personal information without authorization.",
         ],
       },
@@ -188,12 +188,12 @@ export const legalDocuments: LegalDocument[] = [
   {
     slug: "acceptable-use-policy",
     title: "Acceptable Use Policy",
-    summary: "Rules for safe, lawful, and respectful use of Forma.",
+    summary: "Rules for safe, lawful, and respectful use of Bluebuild.",
     sections: [
       {
         heading: "Safety-First Scope",
         paragraphs: [
-          "Forma is intended for low-voltage maker electronics, educational prototypes, and early design exploration. You may not use the Service to create or facilitate unsafe, illegal, abusive, or rights-violating activity.",
+          "Bluebuild is intended for low-voltage maker electronics, educational prototypes, and early design exploration. You may not use the Service to create or facilitate unsafe, illegal, abusive, or rights-violating activity.",
         ],
       },
       {
@@ -234,13 +234,13 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "Not Professional Engineering Advice",
         paragraphs: [
-          "Forma outputs are not professional electrical, mechanical, industrial, product safety, legal, regulatory, medical, or manufacturing advice. Generated designs, diagrams, BOMs, validation reports, and assembly notes may be wrong, incomplete, unsafe, outdated, or unsuitable for your intended use.",
+          "Bluebuild outputs are not professional electrical, mechanical, industrial, product safety, legal, regulatory, medical, or manufacturing advice. Generated designs, diagrams, BOMs, validation reports, and assembly notes may be wrong, incomplete, unsafe, outdated, or unsuitable for your intended use.",
         ],
       },
       {
         heading: "Intended Scope",
         paragraphs: [
-          "Forma is intended for low-voltage maker electronics, typically 3.3V to 5V DC educational prototypes and hobby projects.",
+          "Bluebuild is intended for low-voltage maker electronics, typically 3.3V to 5V DC educational prototypes and hobby projects.",
         ],
       },
       {
@@ -268,10 +268,10 @@ export const legalDocuments: LegalDocument[] = [
   {
     slug: "cookie-and-local-storage-notice",
     title: "Cookie and Local Storage Notice",
-    summary: "How Forma may use browser storage and similar technologies.",
+    summary: "How Bluebuild may use browser storage and similar technologies.",
     sections: [
       {
-        heading: "How Forma Uses Storage",
+        heading: "How Bluebuild Uses Storage",
         bullets: [
           "Keeping users signed in and supporting secure sessions.",
           "Remembering settings, preferences, selected project state, and UI state.",
@@ -319,7 +319,7 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "Repeat Infringers",
         paragraphs: [
-          "Forma may suspend or terminate accounts of repeat infringers and may remove content that appears to infringe intellectual property rights.",
+          "Bluebuild may suspend or terminate accounts of repeat infringers and may remove content that appears to infringe intellectual property rights.",
         ],
       },
       {
@@ -340,10 +340,10 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "In Scope",
         bullets: [
-          "The public Forma web application.",
-          "Documented Forma APIs.",
+          "The public Bluebuild web application.",
+          "Documented Bluebuild APIs.",
           "Authentication, authorization, project access, and integration handling.",
-          "Public repository code maintained by Forma.",
+          "Public repository code maintained by Bluebuild.",
         ],
       },
       {
@@ -359,7 +359,7 @@ export const legalDocuments: LegalDocument[] = [
       {
         heading: "Safe Harbor",
         paragraphs: [
-          "If you act in good faith, follow this policy, avoid privacy violations and disruption, and report issues promptly, Forma will not pursue legal action against you for the research itself.",
+          "If you act in good faith, follow this policy, avoid privacy violations and disruption, and report issues promptly, Bluebuild will not pursue legal action against you for the research itself.",
         ],
       },
     ],
@@ -367,12 +367,12 @@ export const legalDocuments: LegalDocument[] = [
   {
     slug: "accessibility-statement",
     title: "Accessibility Statement",
-    summary: "Forma's accessibility commitment and feedback path.",
+    summary: "Bluebuild's accessibility commitment and feedback path.",
     sections: [
       {
         heading: "Commitment",
         paragraphs: [
-          "Forma is committed to making the Service accessible and usable for as many people as possible.",
+          "Bluebuild is committed to making the Service accessible and usable for as many people as possible.",
           "Our goal is to substantially conform to the Web Content Accessibility Guidelines (WCAG) 2.2 Level AA where practical for the current product stage.",
         ],
       },

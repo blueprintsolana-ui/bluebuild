@@ -1739,6 +1739,12 @@ export function FormaWorkspace({
   useLayoutEffect(() => { chatStorageScopeRef.current = chatStorageScope; }, [chatStorageScope]);
   const galleryIdentityKey = JSON.stringify([API_URL, authRequired, authIdentityKey, Boolean(isSignedIn)]);
   const [prompt, setPrompt] = useState("");
+  useEffect(() => {
+    // Bluebuild landing page hands over the idea typed into its prompt box.
+    if (typeof window === "undefined") return;
+    const incoming = new URLSearchParams(window.location.search).get("prompt");
+    if (incoming) setPrompt(incoming.slice(0, 2000));
+  }, []);
   const [activeChatId, setActiveChatId] = useState(() => currentRouteChatId ? safeDecodeChatId(currentRouteChatId) : newBuildChatId());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -2718,7 +2724,7 @@ export function FormaWorkspace({
       setChatRouteTransition(null);
       setProjectIR(null);
       setActiveTab("overview");
-      router.push("/");
+      router.push("/app");
       return;
     }
     if (currentProjectChatHasStarted()) {
@@ -2728,7 +2734,7 @@ export function FormaWorkspace({
       setProjectIR(null);
       setActiveTab("overview");
     }
-    router.push("/");
+    router.push("/app");
   };
 
   const startNewProjectChat = () => {
@@ -3441,7 +3447,7 @@ export function FormaWorkspace({
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result !== "string") {
-          setGenerationInputNotice("Forma could not read that PDF. Try exporting it again.");
+          setGenerationInputNotice("Bluebuild could not read that PDF. Try exporting it again.");
           return;
         }
         setSelectedImage(null);
@@ -3451,10 +3457,10 @@ export function FormaWorkspace({
           dataUrl: reader.result,
         });
         setGenerationMode("progressive");
-        setGenerationInputNotice("PDF attached. Forma will extract its text into project context.");
+        setGenerationInputNotice("PDF attached. Bluebuild will extract its text into project context.");
       };
       reader.onerror = () => {
-        setGenerationInputNotice("Forma could not read that PDF. Try uploading it again.");
+        setGenerationInputNotice("Bluebuild could not read that PDF. Try uploading it again.");
       };
       reader.readAsDataURL(file);
       return;
@@ -3467,7 +3473,7 @@ export function FormaWorkspace({
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result !== "string") {
-        setGenerationInputNotice("Forma could not read that image. Try another image format.");
+        setGenerationInputNotice("Bluebuild could not read that image. Try another image format.");
         return;
       }
       setGenerationInputNotice(null);
@@ -3476,7 +3482,7 @@ export function FormaWorkspace({
       setSelectedImageSource(source);
     };
     reader.onerror = () => {
-      setGenerationInputNotice("Forma could not read that image. Try copying or uploading it again.");
+      setGenerationInputNotice("Bluebuild could not read that image. Try copying or uploading it again.");
     };
     reader.readAsDataURL(file);
   };
@@ -4443,7 +4449,7 @@ export function FormaWorkspace({
         noteAuthResponseStatus(res.status);
         const apiError = await readApiError(res);
         if (apiError.debug) {
-          console.error("Forma API debug trace", apiError);
+          console.error("Bluebuild API debug trace", apiError);
         }
         const errorMessage = apiError.message;
         const displayErrorMessage = compactDiagnosticText(errorMessage) || errorMessage;
@@ -4471,7 +4477,8 @@ export function FormaWorkspace({
           });
           return;
         }
-        if (res.status === 503) {
+        if (res.status === 503 || res.status === 429) {
+          window.dispatchEvent(new Event("bluebuild:refresh"));
           setGenerationInputNotice(displayErrorMessage);
           updateChatMessage(assistantMessageId, {
             content: displayErrorMessage,
@@ -4487,6 +4494,7 @@ export function FormaWorkspace({
       }
 
       const data = await res.json();
+      window.dispatchEvent(new Event("bluebuild:refresh"));
       if (data.job) {
         applyChatPipelineProgressFromJob(assistantMessageId, data.job, pipelineProgress, generateProductImage);
         applyThreadPipelineProgressFromJob(requestChatId, assistantMessageId, data.job, pipelineProgress, generateProductImage);
@@ -4752,12 +4760,14 @@ export function FormaWorkspace({
         noteAuthResponseStatus(res.status);
         const apiError = await readApiError(res);
         if (apiError.debug) {
-          console.error("Forma API debug trace", apiError);
+          console.error("Bluebuild API debug trace", apiError);
         }
+        window.dispatchEvent(new Event("bluebuild:refresh"));
         throw new Error(compactDiagnosticText(apiError.message) || apiError.message);
       }
 
       const data = await res.json();
+      window.dispatchEvent(new Event("bluebuild:refresh"));
       const ir = withProjectResponseMetadata(data.project_ir, {
         ...data,
         project_id: sourceProjectId,
@@ -5116,7 +5126,7 @@ export function FormaWorkspace({
       delete next[chatId];
       return next;
     });
-    const pending = { content: "Waiting for Forma Agent.", status: "loading" as const };
+    const pending = { content: "Waiting for Bluebuild Agent.", status: "loading" as const };
     updateThreadMessage(chatId, assistantMessageId, pending);
     if (activeChatIdRef.current === chatId) updateChatMessage(assistantMessageId, pending);
     const run = beginGenerationRun(projectId ? "project-chat" : "chat", chatId);
@@ -8127,7 +8137,7 @@ function ChatWorkspace({
                   variant="project"
                    emptyMessage="This chat has no project messages yet."
                    isLoading={readOnly ? false : isLoading}
-                   assistantLabel={authoringActive ? "OpenCode" : "Forma"}
+                   assistantLabel={authoringActive ? "OpenCode" : "Bluebuild"}
                 />
                 <div ref={endRef} />
 
@@ -8137,7 +8147,7 @@ function ChatWorkspace({
             {chatAvailable && (
               <form onSubmit={onSubmit} className="shrink-0 border-t border-white/5 bg-[#0f1117]/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:p-4">
               <div className="mx-auto max-w-3xl">
-                {notice && <div id="project-input-notice" role="status" className="mb-3 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">{notice.replace(/\bOpenCode\b/g, "Forma Agent")}</div>}
+                {notice && <div id="project-input-notice" role="status" className="mb-3 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">{notice.replace(/\bOpenCode\b/g, "Bluebuild Agent")}</div>}
                 <div className="w-full rounded-2xl border border-white/5 bg-[#181b22] p-3 shadow-lg transition-all focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/20">
                   <ChatAttachmentSelection {...attachmentControls} />
                   <textarea
@@ -8480,7 +8490,7 @@ function AgentPipelineProgressView({
         {isError ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" /> : isCancelled ? <Square className="mt-0.5 h-4 w-4 shrink-0 fill-current text-amber-300" /> : isLoading ? <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-emerald-400" /> : <Cpu className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />}
         <div className="min-w-0">
           <div className="truncate text-xs font-semibold text-zinc-100">{activeStep?.label || "Preparing job"}</div>
-          <div className="mt-1 truncate text-[11px] font-medium text-emerald-400">{activeStep?.agent || "Forma runtime"}</div>
+          <div className="mt-1 truncate text-[11px] font-medium text-emerald-400">{activeStep?.agent || "Bluebuild runtime"}</div>
           {activeStep?.description && !compact && (
             <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-zinc-500">{activeStep.description}</div>
           )}

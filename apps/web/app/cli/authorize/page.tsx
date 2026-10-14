@@ -34,11 +34,11 @@ export default function CliAuthorizePage() {
         return;
       }
       setState("approved");
-      setMessage("Return to your terminal. Forma OSS has approved the CLI session.");
+      setMessage("Return to your terminal. Bluebuild has approved the CLI session.");
     })().catch(() => {
       if (!cancelled) {
         setState("error");
-        setMessage("Forma could not approve this CLI session. Try again from the terminal.");
+        setMessage("Bluebuild could not approve this CLI session. Try again from the terminal.");
       }
     });
     return () => {
@@ -47,12 +47,12 @@ export default function CliAuthorizePage() {
   }, [auth, code]);
 
   return (
-    <PublicAppShell badge="Forma OSS CLI" title="Authorize this terminal">
+    <PublicAppShell badge="Bluebuild CLI" title="Authorize this terminal">
       <div className="mx-auto max-w-xl space-y-5 py-8 text-center">
         {!code && <p>Open this page from the URL printed by `forma-oss login`.</p>}
         {code && auth.authRequired && !auth.isSignedIn && (
           <>
-            <p>Sign in to approve the CLI session for your Forma account.</p>
+            <p>Sign in to approve the CLI session for your Bluebuild account.</p>
             <button
               className="rounded-md bg-slate-100 px-4 py-2 font-medium text-slate-950"
               onClick={() => auth.openSignIn({ redirectUrl: window.location.href })}

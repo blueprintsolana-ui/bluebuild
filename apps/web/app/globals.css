@@ -150,40 +150,53 @@
  *   base3  #fdf6e3  brightest emphasis
  */
 :root[data-theme="solarized-dark"] {
+  /* Bluebuild "drafting" theme (kept under the original theme id). */
   color-scheme: dark;
-  --forma-page: #002b36;
-  --forma-surface: #001f26;
-  --forma-surface-muted: #073642;
-  --forma-border: rgb(101 123 131 / 0.35);
-  --forma-text: #839496;
+  --forma-page: #14366E;
+  --forma-surface: #0E2A57;
+  --forma-surface-muted: #1C4A91;
+  --forma-border: rgb(58 112 196 / 0.55);
+  --forma-text: #C9D7EC;
 
-  --forma-text-strong: #fdf6e3;
-  --forma-text-body: #839496;
-  --forma-text-secondary: #93a1a1;
-  --forma-text-muted: #657b83;
+  --forma-text-strong: #F4F7FB;
+  --forma-text-body: #C9D7EC;
+  --forma-text-secondary: #A9BEDD;
+  --forma-text-muted: #8AA3C8;
 
-  --forma-cyan-rgb: 42 161 152;
-  --forma-green-rgb: 133 153 0;
-  --forma-yellow-rgb: 181 137 0;
-  --forma-red-rgb: 220 50 47;
-  --forma-violet-rgb: 108 113 196;
+  --forma-cyan-rgb: 127 178 255;
+  --forma-green-rgb: 120 214 160;
+  --forma-yellow-rgb: 255 181 71;
+  --forma-red-rgb: 255 107 107;
+  --forma-violet-rgb: 168 160 255;
 
-  --forma-cyan-soft: #2aa198;
-  --forma-green-soft: #859900;
-  --forma-yellow-soft: #b58900;
-  --forma-red-soft: #dc322f;
-  --forma-violet-soft: #6c71c4;
+  --forma-cyan-soft: #7FB2FF;
+  --forma-green-soft: #78D6A0;
+  --forma-yellow-soft: #FFB547;
+  --forma-red-soft: #FF6B6B;
+  --forma-violet-soft: #A8A0FF;
 
-  --forma-neutral-rgb: 131 148 150;
-  --forma-chrome-rgb: 0 31 38;
-  --forma-scrim-rgb: 0 43 54;
-  --forma-scroll-thumb: #586e75;
+  --forma-neutral-rgb: 169 190 221;
+  --forma-chrome-rgb: 14 42 87;
+  --forma-scrim-rgb: 10 30 64;
+  --forma-scroll-thumb: #3A70C4;
   --forma-card-shadow: 0 18px 38px rgb(0 0 0 / 0.35);
   --forma-composer-shadow: 0 8px 20px rgb(0 0 0 / 0.28);
   --forma-selected-wash-alpha: 0.15;
-  --forma-accent-primary: #2aa198;
-  --forma-accent-primary-hover: #35b3aa;
-  --forma-accent-text: #002b36;
+  --forma-accent-primary: #FFB547;
+  --forma-accent-primary-hover: #FFC66E;
+  --forma-accent-text: #1A1300;
+}
+
+/* Bluebuild drafting grid behind the app. */
+:root[data-theme="solarized-dark"] body {
+  background-color: var(--forma-page);
+  background-image:
+    linear-gradient(rgb(244 247 251 / 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 247 251 / 0.10) 1px, transparent 1px),
+    linear-gradient(rgb(244 247 251 / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 247 251 / 0.045) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  background-attachment: fixed;
 }
 
 * {
@@ -198,7 +211,7 @@ body {
   overflow-x: hidden;
   background: var(--forma-page);
   color: var(--forma-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   text-rendering: geometricPrecision;
 }
 

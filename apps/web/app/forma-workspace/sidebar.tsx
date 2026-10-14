@@ -661,10 +661,10 @@ export function ChatSidebar({
             aria-label="Home"
             title="Home"
           >
-            <CaidLogo className="h-5 w-9" sizes="36px" />
+            <CaidLogo className="h-6 w-9" sizes="36px" />
           </button>
           {!compact && (
-            <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-zinc-100">Forma</span>
+            <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-zinc-100">Bluebuild</span>
           )}
           <button
             type="button"

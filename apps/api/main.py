@@ -193,6 +193,7 @@ from apps.api.auth import (
     require_user_context,
 )
 from apps.api.security import SecurityLimitsMiddleware, cors_origins, security_config
+from apps.api.bluebuild_tiers import BluebuildQuotaMiddleware, router as bluebuild_router
 from apps.api.project_deletion import (
     DELETION_POLICY_VERSION,
     PERMITTED_CONTRIBUTION_PURPOSES,
@@ -354,6 +355,7 @@ class ApiPrefixCompatibilityMiddleware:
 app.add_middleware(ApiPrefixCompatibilityMiddleware)
 app.add_middleware(VercelOidcContextMiddleware)
 app.add_middleware(SecurityLimitsMiddleware)
+app.add_middleware(BluebuildQuotaMiddleware)
 
 # Credentialed CORS must be explicit. Hosted deployments with no configured
 # origins remain API-only instead of accidentally exposing browser credentials.
@@ -380,6 +382,7 @@ app.include_router(cli_projects_router, dependencies=[Depends(require_client_com
 app.include_router(cli_credentials_router, dependencies=[Depends(require_client_compatibility)])
 app.include_router(version_router)
 app.include_router(opencode_router)
+app.include_router(bluebuild_router)
 
 
 def _deployment_runtime_config(llm_config: Dict[str, Any]) -> Dict[str, Any]:

@@ -81,7 +81,7 @@ export default function ConversationMessageList({
   canBuildNow = false,
   buildNowLoading = false,
   onBuildNow,
-  assistantLabel = "Forma",
+  assistantLabel = "Bluebuild",
 }: {
   messages: ConversationMessage[];
   renderPipelineProgress: (message: ConversationMessage) => ReactNode;
@@ -103,7 +103,7 @@ export default function ConversationMessageList({
       .find((message) => message.role === "assistant" && Boolean(message.contextSuggestions?.length))?.id
     : null;
   const projectLayout = variant === "project";
-  const displayAssistantLabel = assistantLabel === "OpenCode" ? "Forma Agent" : assistantLabel;
+  const displayAssistantLabel = assistantLabel === "OpenCode" ? "Bluebuild Agent" : assistantLabel;
 
   useEffect(() => {
     if (!hasRuntimeOfflineMessage) return;
@@ -195,7 +195,7 @@ export default function ConversationMessageList({
             <span suppressHydrationWarning>{formatTimestamp(message.timestamp)}</span>
             <CopyButton
               value={message.content}
-              label={isUser ? "Copy your message" : isSystem ? "Copy context message" : "Copy Forma's message"}
+              label={isUser ? "Copy your message" : isSystem ? "Copy context message" : "Copy Bluebuild's message"}
               className="ml-auto"
             />
           </div>
@@ -217,7 +217,7 @@ export default function ConversationMessageList({
                       window.localStorage.setItem(FORMA_AGENT_RUNTIME_STORAGE_KEY, runtimeId);
                     }}
                     className="h-8 w-full rounded-lg border border-white/10 bg-[#181b22] px-2 text-xs text-zinc-100 outline-none focus:border-rose-300/40"
-                    aria-label="Choose Forma Agent runtime"
+                    aria-label="Choose Bluebuild Agent runtime"
                   >
                     {runtimeOptions.map((runtime) => (
                       <option key={runtime.id} value={runtime.id}>{runtime.label}</option>
