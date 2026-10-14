@@ -99,26 +99,15 @@ export function BluebuildQuotaBadge() {
 
   if (!status.signed_in) {
     return (
-      <div style={shell}>
-        <span>Connect a Solana wallet for {status.free_per_day ?? 5} free designs a day</span>
-        <button
-          type="button"
-          onClick={() => openSignIn({ redirectUrl: typeof window !== "undefined" ? window.location.href : "/" })}
-          style={{
-            minHeight: 36,
-            padding: "0 12px",
-            background: "#FFB547",
-            color: "#1A1300",
-            border: "none",
-            borderRadius: 4,
-            fontFamily: "inherit",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Connect wallet
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => openSignIn({ redirectUrl: typeof window !== "undefined" ? window.location.href : "/" })}
+        style={{ ...shell, cursor: "pointer", textAlign: "left" }}
+      >
+        <span>
+          Connect a Solana wallet for <span style={{ color: "#FFB547" }}>{status.free_per_day ?? 5} free designs</span> a day
+        </span>
+      </button>
     );
   }
 

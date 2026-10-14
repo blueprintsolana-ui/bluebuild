@@ -78,6 +78,7 @@ declare module "lucide-react" {
   export const Trash2: LucideIcon;
   export const TriangleAlert: LucideIcon;
   export const Volume2: LucideIcon;
+  export const Wallet: LucideIcon;
   export const Wrench: LucideIcon;
   export const X: LucideIcon;
 }

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import CaidLogo from "../../components/caid-logo";
+import { ConnectWalletButton } from "../../components/connect-wallet-button";
 import type { ChatActivity } from "../../lib/chat-activity";
 import { FormaUserButton, useFormaAuth } from "../../lib/forma-auth";
 import {
@@ -151,6 +152,9 @@ export function WorkspaceStatusCorner({ status }: { status: WorkspaceStatusPrese
       <span className="pointer-events-auto">
         <ApiConnectionStatus status={status} />
       </span>
+      <span className="pointer-events-auto">
+        <ConnectWalletButton />
+      </span>
     </div>
   );
 }
@@ -191,11 +195,11 @@ export function AuthStatusControl({
       className={`inline-flex shrink-0 items-center justify-center rounded-lg border border-white/10 font-medium text-zinc-300 transition-colors hover:bg-zinc-800/40 hover:text-zinc-100 disabled:cursor-wait disabled:text-zinc-600 disabled:hover:bg-transparent ${
         compact ? "h-8 w-8" : "h-8 gap-1.5 px-2.5 text-xs"
       }`}
-      aria-label={isLoaded ? "Sign in" : "Checking sign-in status"}
-      title={isLoaded ? "Sign in" : "Checking sign-in status"}
+      aria-label={isLoaded ? "Connect wallet" : "Checking sign-in status"}
+      title={isLoaded ? "Connect wallet" : "Checking sign-in status"}
     >
       <KeyRound className={compact ? "h-4 w-4" : "h-3.5 w-3.5"} />
-      {!compact && <span>Sign in</span>}
+      {!compact && <span>Connect wallet</span>}
     </button>
   );
 }

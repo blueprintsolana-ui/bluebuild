@@ -1016,7 +1016,97 @@ html:is([data-theme="light"], [data-theme="arctic"], [data-theme="solarized-dark
   color: var(--forma-text-muted);
 }
 
+.connect-wallet-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  overflow: hidden;
+  border: 1px solid rgb(255 221 150 / 0.9);
+  border-radius: 0.625rem;
+  background: linear-gradient(135deg, #ffd27a 0%, #ffb547 45%, #f08c1a 100%);
+  color: #1a1300;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgb(255 181 71 / 0.25),
+    0 6px 22px -6px rgb(255 166 43 / 0.75),
+    inset 0 1px 0 rgb(255 255 255 / 0.55);
+  animation: connect-wallet-glow 2.8s ease-in-out infinite;
+  transition: transform 150ms ease, filter 150ms ease;
+}
+
+.connect-wallet-button::after {
+  content: "";
+  position: absolute;
+  inset: -40% auto -40% -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent 0%, rgb(255 255 255 / 0.75) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: connect-wallet-shine 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.connect-wallet-button:hover {
+  transform: translateY(-1px) scale(1.03);
+  filter: brightness(1.06);
+}
+
+.connect-wallet-button:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.connect-wallet-button:focus-visible {
+  outline: 2px solid #fff3d6;
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .connect-wallet-button {
+    height: 2.75rem;
+    padding: 0 1.25rem;
+    font-size: 0.9375rem;
+  }
+}
+
+@keyframes connect-wallet-shine {
+  0%,
+  55% {
+    left: -60%;
+  }
+  85%,
+  100% {
+    left: 130%;
+  }
+}
+
+@keyframes connect-wallet-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgb(255 181 71 / 0.25),
+      0 6px 22px -6px rgb(255 166 43 / 0.75),
+      inset 0 1px 0 rgb(255 255 255 / 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgb(255 181 71 / 0.18),
+      0 8px 30px -4px rgb(255 166 43 / 0.95),
+      inset 0 1px 0 rgb(255 255 255 / 0.55);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .connect-wallet-button,
+  .connect-wallet-button::after {
+    animation: none;
+  }
+
   .workspace-chrome-header {
     transition: none;
   }
