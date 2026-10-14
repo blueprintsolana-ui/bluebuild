@@ -1388,9 +1388,10 @@ def _image_bytes_from_data(image_data: str) -> Tuple[bytes, str]:
         raise ValueError("Reference image data is empty.")
 
     if image_data.startswith(("http://", "https://")):
-        request = urllib.request.Request(image_data, headers={"User-Agent": "Forma-OSS/1.0"})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            return response.read(), response.headers.get_content_type() or "image/png"
+        from forma_core.safe_images import fetch_trusted_image
+
+        safe = fetch_trusted_image(image_data)
+        return safe.content, safe.content_type
 
     content_type = "image/png"
     base64_data = image_data

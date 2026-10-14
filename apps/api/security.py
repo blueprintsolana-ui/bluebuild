@@ -150,42 +150,17 @@ def _error(status_code: int, code: str, message: str) -> JSONResponse:
 
 
 def validate_image_limits(encoded: str) -> tuple[bytes, str]:
-    """Decode and validate an inline image before it reaches storage or a provider."""
-    import base64
-    import binascii
+    """Decode, verify and re-encode an inline image before it reaches storage or a provider."""
+    from forma_core.safe_images import sanitize_inline_image
 
     if len(encoded) > _integer("FORMA_MAX_IMAGE_ENCODED_CHARS", MAX_IMAGE_ENCODED_CHARS):
         raise ValueError("Reference image exceeds the configured encoded size limit.")
-    raw = encoded.strip()
-    mime = "image/png"
-    if "," in raw:
-        header, raw = raw.split(",", 1)
-        if not header.lower().startswith("data:") or ";base64" not in header.lower():
-            raise ValueError("Reference image must be a base64 data URL.")
-        mime = header.split(";", 1)[0][5:].lower()
-    if mime not in {"image/png", "image/jpeg", "image/webp", "image/gif"}:
-        raise ValueError("Reference image MIME type is not supported.")
-    try:
-        decoded = base64.b64decode(raw.strip(), validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise ValueError("Reference image could not be decoded.") from exc
-    if len(decoded) > _integer("FORMA_MAX_IMAGE_BYTES", MAX_IMAGE_BYTES):
-        raise ValueError("Reference image exceeds the configured decoded size limit.")
-    try:
-        from PIL import Image
-        from io import BytesIO
-
-        with Image.open(BytesIO(decoded)) as image:
-            image.verify()
-        with Image.open(BytesIO(decoded)) as image:
-            max_dimension = _integer("FORMA_MAX_IMAGE_DIMENSION", MAX_IMAGE_DIMENSION)
-            if image.width > max_dimension or image.height > max_dimension:
-                raise ValueError("Reference image dimensions exceed the configured limit.")
-    except ImportError:
-        logger.warning("Pillow is unavailable; image dimension validation was skipped.")
-    except (OSError, SyntaxError) as exc:
-        raise ValueError("Reference image is invalid.") from exc
-    return decoded, mime
+    safe = sanitize_inline_image(
+        encoded,
+        max_bytes=_integer("FORMA_MAX_IMAGE_BYTES", MAX_IMAGE_BYTES),
+        max_dimension=_integer("FORMA_MAX_IMAGE_DIMENSION", MAX_IMAGE_DIMENSION),
+    )
+    return safe.content, safe.content_type
 
 
 def security_config() -> dict[str, Any]:

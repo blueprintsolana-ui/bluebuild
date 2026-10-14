@@ -1,13 +1,28 @@
 from __future__ import annotations
 
+import base64
+import io
 import unittest
 
+from PIL import Image
+
 from forma_core.image_providers import GeneratedImage
+from forma_core.safe_images import sanitize_inline_image
 from forma_core.agents.orchestrator import build_mechanical_render_data
 from forma_core.workspaces.projects.models import ComponentInstance, HardwareIntermediateRepresentation, MechanicalNotes, ProjectOverview
 from forma_core.workspaces.projects.objects import namespace_payload
 from forma_core.workspaces.projects.output import attach_hardware_reference_image, attach_product_image
 
+
+
+def _real_png_data_url() -> str:
+    buffer = io.BytesIO()
+    Image.new("RGB", (4, 4), (40, 120, 200)).save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+REAL_PNG = _real_png_data_url()
+CLEAN_PNG = sanitize_inline_image(REAL_PNG)
 
 class ProjectOutputTests(unittest.TestCase):
     def test_mechanical_render_data_does_not_create_a_cad_model(self) -> None:
@@ -117,14 +132,23 @@ class ProjectOutputTests(unittest.TestCase):
 
         attach_hardware_reference_image(
             ir,
-            "data:image/png;base64,aW1hZ2U=",
+            REAL_PNG,
             media_type="image/png",
             storage_handler=lambda *_args, **_kwargs: {"reference_image_storage_enabled": False},
         )
 
-        self.assertEqual("data:image/png;base64,aW1hZ2U=", ir.assembly_metadata["reference_image_data"])
-        self.assertEqual("image/png", ir.assembly_metadata["reference_image_content_type"])
+        self.assertEqual(CLEAN_PNG.data_url, ir.assembly_metadata["reference_image_data"])
+        self.assertEqual(CLEAN_PNG.content_type, ir.assembly_metadata["reference_image_content_type"])
         self.assertEqual("prompt_image", ir.assembly_metadata["input_mode"])
+
+    def test_fake_or_remote_reference_images_are_refused(self) -> None:
+        for payload in ("data:image/png;base64,aW1hZ2U=", "https://169.254.169.254/latest/meta-data/"):
+            with self.subTest(payload=payload):
+                ir = HardwareIntermediateRepresentation(assembly_metadata={"project_id": "29f2853c-ba3e-425a-b4c2-60f91cd2398b"})
+                stored = []
+                attach_hardware_reference_image(ir, payload, storage_handler=lambda *args, **kwargs: stored.append(kwargs) or {})
+                self.assertEqual([], stored)
+                self.assertNotIn("reference_image_data", ir.assembly_metadata)
 
     def test_hardware_reference_does_not_replace_an_existing_stored_image(self) -> None:
         ir = HardwareIntermediateRepresentation(assembly_metadata={"reference_image_url": "https://example.test/ref.png"})

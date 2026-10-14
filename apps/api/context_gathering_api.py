@@ -35,6 +35,7 @@ from forma_core.workspaces.context import (
     ContextGatheringRequest,
     ContextGatheringResponse,
 )
+from forma_core.safe_images import UnsafeImageError, sanitize_inline_image
 from forma_core.workspaces.context.pdf import PdfContextError, ingest_pdf_data_url
 from forma_core.workspaces.readiness import ReadinessError
 from forma_core.workspaces.workflow import ProjectWorkflowState, WorkflowActorType, WorkflowStateError
@@ -69,6 +70,21 @@ def _is_pdf_attachment(attachment: ContextAttachment) -> bool:
             or data_url_prefix.startswith("data:application/pdf")
         )
     )
+
+
+def _sanitize_image_attachments(request: ContextGatheringRequest) -> ContextGatheringRequest:
+    """Re-encode inline image attachments so only verified pixels are stored or sent to models."""
+
+    changed = False
+    attachments: list[ContextAttachment] = []
+    for attachment in request.attachments:
+        if attachment.kind != "image" or not attachment.data_url:
+            attachments.append(attachment)
+            continue
+        safe = sanitize_inline_image(attachment.data_url)
+        attachments.append(attachment.model_copy(update={"data_url": safe.data_url, "media_type": safe.content_type}))
+        changed = True
+    return request.model_copy(update={"attachments": attachments}) if changed else request
 
 
 def _ingest_pdf_attachments(request: ContextGatheringRequest) -> ContextGatheringRequest:
@@ -207,6 +223,14 @@ def gather_project_context_endpoint(
     from forma_core.user_integrations import UserIntegrationStore
 
     require_hosted_chat_enabled(user)
+
+    try:
+        request = _sanitize_image_attachments(request)
+    except UnsafeImageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "image_rejected", "message": str(exc)},
+        ) from exc
 
     try:
         request = _ingest_pdf_attachments(request)

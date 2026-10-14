@@ -57,6 +57,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, ValidationError
 from dotenv import load_dotenv
 
@@ -194,6 +195,7 @@ from apps.api.auth import (
 )
 from apps.api.security import SecurityLimitsMiddleware, cors_origins, security_config
 from apps.api.bluebuild_launchpad import router as launchpad_router
+from forma_core.safe_images import UnsafeImageError, sanitize_inline_image
 from apps.api.bluebuild_tiers import BluebuildQuotaMiddleware, router as bluebuild_router
 from apps.api.project_deletion import (
     DELETION_POLICY_VERSION,
@@ -755,6 +757,16 @@ async def generate_project_endpoint(request: GenerateProjectRequest, user: UserC
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=detail,
         )
+
+    if request.image_data:
+        try:
+            safe_image = await run_in_threadpool(sanitize_inline_image, request.image_data)
+        except UnsafeImageError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"code": "image_rejected", "message": str(exc)},
+            ) from exc
+        request = request.model_copy(update={"image_data": safe_image.data_url})
 
     if not (request.prompt or "").strip() and not request.image_data:
         message = "Provide a prompt or reference image."

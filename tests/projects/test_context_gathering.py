@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import io
 import os
 import tempfile
 import unittest
@@ -13,6 +15,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from apps.api import a2a, main
 from apps.api.a2a import A2AMessage
@@ -22,6 +25,7 @@ from apps.api.context_gathering_api import context_gathering_agent, router
 from apps.api.worker_plans_api import router as worker_plans_router
 from forma_core.agents.context_gathering import ContextGatheringAgent
 from forma_core import database
+from forma_core.safe_images import sanitize_inline_image
 from forma_core.persistence.providers import create_sqlite_provider
 from forma_core.persistence.repositories import SqlAlchemyRepository
 from forma_core.workers import WorkerPlanStatus
@@ -66,6 +70,16 @@ def sqlite_repository() -> Iterator[None]:
             database._DATABASE_REPOSITORY = original
             provider.dispose()
 
+
+
+def _real_png_data_url() -> str:
+    buffer = io.BytesIO()
+    Image.new("RGB", (4, 4), (40, 120, 200)).save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+REAL_PNG = _real_png_data_url()
+CLEAN_PNG = sanitize_inline_image(REAL_PNG)
 
 class ContextBriefImageReferenceTests(unittest.TestCase):
     def test_uploaded_image_keeps_inline_data_on_the_design_brief(self) -> None:
@@ -636,7 +650,7 @@ class ContextGatheringIntegrationTests(unittest.TestCase):
                             "kind": "image",
                             "name": "reference.png",
                             "media_type": "image/png",
-                            "data_url": "data:image/png;base64,aW1hZ2U=",
+                            "data_url": REAL_PNG,
                             "source": "clipboard",
                         },
                         {
@@ -662,7 +676,7 @@ class ContextGatheringIntegrationTests(unittest.TestCase):
         self.assertEqual([1, 2], [brief.brief_version for brief in versions])
         self.assertEqual(2, len(versions[-1].references))
         image_reference = next(item for item in versions[-1].references if item.kind == "uploaded_image")
-        self.assertEqual("data:image/png;base64,aW1hZ2U=", image_reference.metadata["data_url"])
+        self.assertEqual(CLEAN_PNG.data_url, image_reference.metadata["data_url"])
         self.assertIn("product images", versions[-1].requested_outputs)
         self.assertIn("The display must remain readable outdoors.", versions[-1].requirements)
         self.assertEqual(4, len(chat.messages))
@@ -670,7 +684,7 @@ class ContextGatheringIntegrationTests(unittest.TestCase):
             message for message in chat.messages
             if isinstance(message, dict) and message.get("imagePreview")
         ]
-        self.assertEqual(["data:image/png;base64,aW1hZ2U="], [message["imagePreview"] for message in image_messages])
+        self.assertEqual([CLEAN_PNG.data_url], [message["imagePreview"] for message in image_messages])
         create_job.assert_not_called()
 
     def test_agent_suggestions_are_returned_and_persisted_with_the_assistant_turn(self) -> None:

@@ -19,6 +19,7 @@ from forma_core.database import (
 )
 from forma_core.images import build_image_provider, build_project_visual_spec
 from forma_core.persistence.images import get_image_storage_config, upload_image_to_supabase_s3
+from forma_core.safe_images import UnsafeImageError, sanitize_user_image
 from forma_core.user_integrations import ResolvedIntegrationSettings
 from forma_core.workspaces.projects.design_lifecycle import (
     RepresentationKind,
@@ -133,13 +134,20 @@ def attach_hardware_reference_image(
     metadata = dict(ir.assembly_metadata or {})
     if metadata.get("reference_image_url") or metadata.get("reference_image_data"):
         return
+    try:
+        safe = sanitize_user_image(payload, allow_trusted_urls=True)
+    except UnsafeImageError as exc:
+        logger.warning("Hardware reference image was refused: %s", exc)
+        return
+    payload = safe.data_url
+    media_type = safe.content_type
     storage_metadata = storage_handler(
         ir,
         image_data=payload,
         metadata_prefix="reference_image",
         object_prefix="reference",
-        fallback_content_type=media_type or "image/png",
-        allow_remote_url=True,
+        fallback_content_type=media_type,
+        allow_remote_url=False,
     )
     reference_metadata = dict(storage_metadata)
     if not storage_metadata.get("reference_image_url"):

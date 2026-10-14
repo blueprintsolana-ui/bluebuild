@@ -6,6 +6,8 @@ from forma_core.config import config
 import re
 import uuid
 import urllib.request
+
+from forma_core.safe_images import fetch_trusted_image
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import quote, urlparse
@@ -254,11 +256,8 @@ def _decode_image_payload(
     if image_data.startswith(("http://", "https://")):
         if not allow_remote_url:
             raise ValueError("Remote image URLs are not accepted for this upload path.")
-        request = urllib.request.Request(image_data, headers={"User-Agent": "Forma-OSS/1.0"})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            content = response.read()
-            content_type = response.headers.get_content_type() or fallback_content_type
-        return content, content_type
+        safe = fetch_trusted_image(image_data)
+        return safe.content, safe.content_type
 
     content_type = fallback_content_type
     base64_data = image_data
