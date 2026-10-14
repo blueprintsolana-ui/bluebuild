@@ -18,7 +18,9 @@ export function LandingHeader() {
           <a href={X_LINK} className="no-underline max-md:hidden" aria-label="Bluebuild on X">@bluebuild_AI</a>
           <a href="/app" className="craft-key min-h-[40px] px-3 normal-case tracking-normal sm:px-[1.1rem]">Launch app</a>
           <a href={PUMP_FUN_LINK} className="craft-key craft-key--primary min-h-[40px] px-3 normal-case tracking-normal sm:px-[1.1rem]">
-            Buy<span className="max-sm:hidden">&nbsp;on pump.fun</span>
+            <span>
+              Buy<span className="max-sm:hidden"> on pump.fun</span>
+            </span>
           </a>
         </div>
       </nav>
