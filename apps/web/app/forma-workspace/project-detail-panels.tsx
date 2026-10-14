@@ -694,9 +694,52 @@ export function MechanicalPanel({
   const relationships = mechanical.spatial_relationships || metadata.spatial_relationships || [];
   const kinematics = cadModel && typeof cadModel === "object" ? cadModel.kinematics : null;
   const compliantPreview = cadModel && typeof cadModel === "object" ? cadModel.compliant_preview : null;
+  // The 3D product model is the same one shown on Overview and used for the renders, so it leads here too.
+  const productModel = useMemo(
+    () => resolveProductModel(metadata?.product_model, mechanical, components),
+    [components, mechanical, metadata?.product_model],
+  );
+  const hasProductModel = productModel?.source === "product_model";
+  const [view, setView] = useState<"product" | "layout">(hasProductModel ? "product" : "layout");
+  const showProduct = view === "product" && productModel;
 
   return (
-    <div className="relative h-full min-h-[420px] w-full overflow-hidden bg-[var(--forma-page)]">
+    <div className="relative flex h-full min-h-[420px] w-full flex-col overflow-hidden bg-[var(--forma-page)]">
+      {productModel && (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--forma-border)] px-4 py-2">
+          <div role="group" aria-label="Mechanical view" className="flex rounded-md border border-[var(--forma-border)] bg-[var(--forma-surface)] p-0.5 text-[11px] font-medium">
+            {[
+              { value: "product" as const, label: "3D product" },
+              { value: "layout" as const, label: "Engineering layout" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={view === option.value}
+                onClick={() => setView(option.value)}
+                className={`rounded px-2.5 py-1 transition ${
+                  view === option.value
+                    ? "bg-[var(--forma-text-strong)] text-[var(--forma-page)]"
+                    : "text-[var(--forma-text-muted)] hover:text-[var(--forma-text-strong)]"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden text-[11px] text-[var(--forma-text-muted)] sm:block">
+            {view === "product" ? "Same model as the Overview and the renders." : "Part placements and clearances from the enclosure plan."}
+          </span>
+        </div>
+      )}
+      {showProduct ? (
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mx-auto max-w-4xl">
+            <ProductModelViewer key={`${productModel.parts.length}:${productModel.extent.join(",")}`} model={productModel} />
+          </div>
+        </div>
+      ) : (
+      <div className="relative min-h-0 flex-1">
       <MechanicalScene
         systemArchitecture={systemArchitecture}
         dimensions={dimensions}
@@ -712,6 +755,8 @@ export function MechanicalPanel({
         electricalActive={electricalActive}
         setElectricalActive={setElectricalActive}
       />
+      </div>
+      )}
     </div>
   );
 }

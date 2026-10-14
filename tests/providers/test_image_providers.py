@@ -65,6 +65,22 @@ class ImageProviderRoutingTests(unittest.TestCase):
         self.assertIn("cut-away", sequence[2]["prompt"].lower())
         self.assertNotIn("top-down transparent", sequence[2]["prompt"].lower())
 
+    def test_renders_are_told_to_match_the_3d_product_model(self) -> None:
+        ir = self.electronic_ir()
+        ir.assembly_metadata = {"product_model": {"parts": [
+            {"label": "Magnet body", "shape": "rounded_box", "size_mm": {"x_mm": 80, "y_mm": 12, "z_mm": 60},
+             "position_mm": {"x_mm": 0, "y_mm": 0, "z_mm": 30}, "color_hex": "#f2f2f2", "finish": "gloss", "is_casing": True},
+            {"label": "Touch screen", "shape": "box", "size_mm": {"x_mm": 60, "y_mm": 1, "z_mm": 40},
+             "position_mm": {"x_mm": 0, "y_mm": -6, "z_mm": 32}, "finish": "screen"},
+        ]}}
+
+        prompts = [build_project_image_prompt("Show it", ir), *[view["prompt"] for view in build_project_image_sequence_prompts("Show it", ir)]]
+
+        for prompt in prompts:
+            self.assertIn("Authoritative 3D product model", prompt)
+            self.assertIn("Magnet body: rounded_box, 80 x 12 x 60 mm", prompt)
+            self.assertIn("Touch screen", prompt)
+
     def test_openai_sequence_edits_the_exterior_render_for_each_derived_view(self) -> None:
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai"}, clear=True):
             provider = build_image_provider(force_enabled=True)

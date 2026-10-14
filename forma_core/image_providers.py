@@ -1438,6 +1438,46 @@ def _first_image_item(response: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _shape_size_text(shape: str, size: Dict[str, Any]) -> str:
+    x, y, z = (size.get(key) for key in ("x_mm", "y_mm", "z_mm"))
+    if shape in {"cylinder", "tube", "cone", "capsule"}:
+        return f"{x:g} mm diameter, {z:g} mm tall"
+    if shape == "sphere":
+        return f"{x:g} mm diameter"
+    if shape == "torus":
+        return f"{x:g} mm across, {y:g} mm thick ring"
+    return f"{x:g} x {y:g} x {z:g} mm"
+
+
+def product_model_shape_brief(ir: Any, limit: int = 14) -> Optional[str]:
+    """Describe the saved 3D product model so renders match the interactive 3D view.
+
+    Returns None when the design has no product model.
+    """
+    metadata = getattr(ir, "assembly_metadata", None) or {}
+    model = metadata.get("product_model") if isinstance(metadata, dict) else None
+    parts = model.get("parts") if isinstance(model, dict) else None
+    if not isinstance(parts, list) or not parts:
+        return None
+    lines: List[str] = []
+    for part in parts[:limit]:
+        if not isinstance(part, dict):
+            continue
+        size = part.get("size_mm") if isinstance(part.get("size_mm"), dict) else {}
+        position = part.get("position_mm") if isinstance(part.get("position_mm"), dict) else {}
+        try:
+            size_text = _shape_size_text(str(part.get("shape") or "box"), size)
+            height = float(position.get("z_mm", 0))
+        except (TypeError, ValueError):
+            continue
+        role = "outer shell" if part.get("is_casing") else "internal or surface part"
+        lines.append(
+            f"{_truncate(str(part.get('label') or 'Part'), 40)}: {part.get('shape') or 'box'}, {size_text}, centred "
+            f"{height:g} mm above the base, {part.get('finish') or 'matte'} {part.get('color_hex') or ''} ({role})"
+        )
+    return "; ".join(lines) or None
+
+
 def build_project_image_prompt(user_prompt: str, ir: Any) -> str:
     overview = getattr(ir, "overview", None)
     mechanical = getattr(ir, "mechanical", None)
@@ -1489,6 +1529,12 @@ def build_project_image_prompt(user_prompt: str, ir: Any) -> str:
 
     if physical_form and str(physical_form).strip().lower() != "unspecified":
         prompt_parts.append(f"Authoritative physical form and silhouette: {_truncate(physical_form, 800)}")
+    shape_brief = product_model_shape_brief(ir)
+    if shape_brief:
+        prompt_parts.append(
+            "Authoritative 3D product model shown next to this render (match its shapes, proportions, colours and "
+            f"part positions exactly; never depict as text): {shape_brief}"
+        )
     metadata = getattr(ir, "assembly_metadata", None) or {}
     source_prompt = metadata.get("source_prompt") if isinstance(metadata, dict) else None
     if source_prompt and source_prompt != "OpenCode project":
@@ -2436,6 +2482,12 @@ def build_project_image_sequence_prompts(user_prompt: str, ir: Any) -> List[Dict
         "Render only the saved parts and features. Do not add electronics, controls, displays, or wiring absent from the spec. No hands, people, watermarks, brand logos, weapons, medical equipment, or mains-voltage hazards.",
     ]
 
+    shape_brief = product_model_shape_brief(ir)
+    if shape_brief:
+        shared.append(
+            "Authoritative 3D product model shown beside these renders: every view must match its shapes, proportions, "
+            f"colours and part positions (never depict as text): {shape_brief}"
+        )
     shared_text = "\n".join(shared)
     return [
         {
