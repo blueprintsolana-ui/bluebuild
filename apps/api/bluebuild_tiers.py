@@ -524,6 +524,10 @@ def _limit_message(plan: QuotaPlan, blocked: str) -> str:
     if blocked == "free":
         return ("Today's free designs are all used up. $BLUEBUILD holders still have access. "
                 "Free designs reset at 00:00 UTC.")
+    if blocked.startswith("ip:"):
+        return (f"The {plan.personal_limit} free designs for this internet connection are used up today, even with a new "
+                "wallet. This stops new wallets being made just for free designs. Hold $BLUEBUILD for a bigger daily "
+                "allowance, or come back after 00:00 UTC.")
     if plan.is_free:
         return (f"You've used your {plan.personal_limit} free designs for today. "
                 "Hold $BLUEBUILD for a bigger daily allowance, or come back after 00:00 UTC.")
@@ -604,6 +608,14 @@ async def bluebuild_status(request: Request, user: UserContext = Depends(optiona
         logger.exception("Bluebuild status failed")
         return {**base, "signed_in": True, "error": "unavailable"}
     remaining = min(max(limit - used.get(subject, 0), 0) for subject, limit in zip(plan.subjects, plan.limits))
+    connection_limited = remaining == 0 and any(
+        subject.startswith("ip:") and used.get(subject, 0) >= limit
+        for subject, limit in zip(plan.subjects, plan.limits)
+    ) and all(
+        used.get(subject, 0) < limit
+        for subject, limit in zip(plan.subjects, plan.limits)
+        if subject.startswith(("wallet:", "user:"))
+    )
     return {
         **base,
         "signed_in": True,
@@ -613,6 +625,7 @@ async def bluebuild_status(request: Request, user: UserContext = Depends(optiona
         "limit": plan.personal_limit,
         "remaining": remaining,
         "free_pool_empty": plan.is_free and used.get("free", 0) >= free_pool_per_day(),
+        "connection_limited": connection_limited,
     }
 
 

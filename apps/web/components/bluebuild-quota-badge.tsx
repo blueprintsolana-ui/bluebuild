@@ -16,6 +16,7 @@ type QuotaStatus = {
   wallet?: string | null;
   free_per_day?: number;
   free_pool_empty?: boolean;
+  connection_limited?: boolean;
   resets_at?: string;
   error?: string;
   owner?: boolean;
@@ -139,7 +140,9 @@ export function BluebuildQuotaBadge() {
       <span style={{ color: empty ? "#FFB547" : "#F4F7FB" }}>
         {status.free_pool_empty && status.tier === "free"
           ? "Free designs used up today"
-          : `${remaining} of ${limit} designs left today`}
+          : status.connection_limited
+            ? "Free designs for this connection used up today"
+            : `${remaining} of ${limit} designs left today`}
       </span>
       {status.wallet ? (
         <>
