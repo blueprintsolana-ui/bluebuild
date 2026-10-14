@@ -848,7 +848,22 @@ def _schema_with_closed_objects(schema: Any) -> Any:
 
 
 def _is_anthropic_grammar_timeout(exc: Exception) -> bool:
-    return "Grammar compilation timed out" in str(exc)
+    """True when Anthropic rejected the JSON-schema output mode itself.
+
+    Covers grammar compilation timeouts and schemas the structured-output mode
+    cannot express (for example self-referencing models such as SystemNode).
+    The caller then retries once with the schema embedded in the prompt.
+    """
+    message = str(exc)
+    if "Grammar compilation timed out" in message:
+        return True
+    if "output_config" in message and (
+        "Circular reference" in message
+        or "Self-referencing" in message
+        or "Invalid schema" in message
+    ):
+        return True
+    return False
 
 
 def _strip_json_markdown(text: str) -> str:
