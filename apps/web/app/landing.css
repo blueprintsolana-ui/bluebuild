@@ -1,0 +1,64 @@
+/* Landing page motion (carried over from the original static landing page). */
+
+@keyframes bb-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes bb-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bb-draw { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+@keyframes bb-flow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -44; } }
+@keyframes bb-flow-in { from { opacity: 0; } to { opacity: 0.95; } }
+@keyframes bb-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: 0.55; } }
+@keyframes bb-scan { 0% { transform: translateY(-10px); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { transform: translateY(var(--bb-scan-distance, 460px)); opacity: 0; } }
+@keyframes bb-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes bb-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+.bb-in { animation: bb-rise 0.9s var(--craft-ease) both; }
+.bb-d1 { animation-delay: 0.15s; }
+.bb-d2 { animation-delay: 0.3s; }
+.bb-d3 { animation-delay: 0.45s; }
+.bb-d4 { animation-delay: 0.6s; }
+
+/* Amber dimension line under the headline. */
+.bb-dim { position: relative; display: block; height: 2px; width: min(360px, 80%); background: var(--craft-amber); transform-origin: left; animation: bb-grow 1.1s var(--craft-ease) 0.8s both; }
+.bb-dim::before, .bb-dim::after { content: ""; position: absolute; top: -7px; width: 2px; height: 16px; background: var(--craft-amber); }
+.bb-dim::before { left: 0; }
+.bb-dim::after { right: 0; }
+
+/* The self-drawing wiring diagram. */
+.bb-fig { position: relative; overflow: hidden; }
+.bb-scan { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--craft-amber); box-shadow: 0 0 14px 2px rgb(255 181 71 / 0.45); pointer-events: none; opacity: 0; animation: bb-scan 7s linear 2.4s infinite; }
+.bb-draw > * { animation: bb-draw 1.2s var(--craft-ease) both; }
+.bb-draw > *:nth-child(1) { animation-delay: 0.5s; }
+.bb-draw > *:nth-child(2) { animation-delay: 0.7s; }
+.bb-draw > *:nth-child(3) { animation-delay: 0.85s; }
+.bb-draw > *:nth-child(4) { animation-delay: 1s; }
+.bb-wires > * { animation: bb-draw 1s var(--craft-ease) both; }
+.bb-wires > *:nth-child(1) { animation-delay: 1.2s; }
+.bb-wires > *:nth-child(2) { animation-delay: 1.3s; }
+.bb-wires > *:nth-child(3) { animation-delay: 1.4s; }
+.bb-wires > *:nth-child(4) { animation-delay: 1.5s; }
+.bb-wires > *:nth-child(5) { animation-delay: 1.6s; }
+.bb-wires > *:nth-child(6) { animation-delay: 1.7s; }
+.bb-flow { opacity: 0; stroke-dasharray: 4 18; animation: bb-flow-in 0.6s ease 2.4s forwards, bb-flow 1.4s linear 2.4s infinite; }
+.bb-node { transform-box: fill-box; transform-origin: center; animation: bb-fade 0.4s ease 2s both, bb-pulse 2.6s ease-in-out 2.4s infinite; }
+.bb-node:nth-child(2n) { animation-delay: 2s, 3.1s; }
+.bb-node:nth-child(3n) { animation-delay: 2s, 3.7s; }
+.bb-lbl { animation: bb-fade 0.8s ease 1.9s both; }
+.bb-tb { animation: bb-rise 0.8s var(--craft-ease) 2.1s both; }
+.bb-rev { animation: bb-blink 1.2s steps(1) 3s 3; }
+.bb-caret { display: inline-block; width: 9px; height: 1.1em; vertical-align: text-bottom; background: var(--craft-amber); animation: bb-blink 1s steps(1) infinite; }
+
+/* Nav links: an amber underline draws in on hover. */
+.bb-nav a:not(.craft-key) { background: linear-gradient(var(--craft-amber), var(--craft-amber)) 0 100% / 0 1px no-repeat; padding-bottom: 3px; transition: background-size 0.3s var(--craft-ease), color 0.2s; }
+.bb-nav a:not(.craft-key):hover { background-size: 100% 1px; color: var(--craft-amber); }
+
+/* Sections slide in as they scroll into view (browsers without scroll timelines just show them). */
+@supports (animation-timeline: view()) {
+  .bb-reveal { animation: bb-rise linear both; animation-timeline: view(); animation-range: entry 0% cover 25%; }
+}
+
+.landing-h1 { font-size: clamp(2.6rem, 6vw, 4rem); }
+.landing-h2 { font-size: clamp(1.9rem, 4vw, 2.5rem); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-in, .bb-dim, .bb-draw > *, .bb-wires > *, .bb-node, .bb-lbl, .bb-tb, .bb-rev, .bb-caret, .bb-reveal { animation: none !important; }
+  .bb-flow, .bb-scan { display: none; }
+}

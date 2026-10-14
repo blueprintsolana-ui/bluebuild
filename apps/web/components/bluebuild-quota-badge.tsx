@@ -50,8 +50,9 @@ function tierLabel(status: QuotaStatus): string {
 export function BluebuildQuotaBadge() {
   const { isSignedIn, getToken, openSignIn } = useFormaAuth();
   const [status, setStatus] = useState<QuotaStatus | null>(null);
-  // Coin product pages are for coin visitors, not design allowances.
-  const onProductPage = (usePathname() || "").startsWith("/coin/");
+  // The landing page and coin pitch decks are for visitors, not design allowances.
+  const pathname = usePathname() || "";
+  const onProductPage = pathname === "/" || pathname.startsWith("/coin/") || pathname.startsWith("/craft-kit");
 
   const refresh = useCallback(async () => {
     try {
