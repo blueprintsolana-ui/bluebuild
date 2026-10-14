@@ -1,0 +1,357 @@
+/*
+ * Bluebuild craft kit: the "crafty drafting table" layer from BLUEBUILD_DESIGN_BRIEF.md.
+ * Paper, tape, stamps, physical keys and the drafting grid. Shared by the landing page and the app.
+ * Motion animates only transform and opacity, and switches off under prefers-reduced-motion.
+ */
+
+:root {
+  --craft-page: #14366e;
+  --craft-panel: #0e2a57;
+  --craft-raised: #1c4a91;
+  --craft-hairline: #3a70c4;
+  --craft-ink: #f4f7fb;
+  --craft-muted: #a9bedd;
+  --craft-amber: #ffb547;
+  --craft-amber-deep: #d98a1c;
+  --craft-brass: #c9a15a;
+  --craft-kraft: #e8dcc3;
+  --craft-kraft-ink: #3b2f1c;
+  --craft-red: #ff6b5e;
+  --craft-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --craft-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --craft-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --craft-sans: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  /* 160 px tile of fractal noise, rasterised once by the browser and repeated. */
+  --craft-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Mostly opaque tile with a scatter of transparent specks, used as a stamp ink mask. */
+  --craft-specks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='1 1 1 1 1 1 1 1 0 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='70' height='70' filter='url(%23s)'/%3E%3C/svg%3E");
+}
+
+/* ---------- drafting grid ---------- */
+
+.craft-grid-lines {
+  background-image:
+    linear-gradient(rgb(244 247 251 / 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 247 251 / 0.15) 1px, transparent 1px),
+    linear-gradient(rgb(244 247 251 / 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(244 247 251 / 0.065) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+}
+
+.craft-living-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--craft-page);
+}
+
+.craft-living-grid__plane {
+  position: absolute;
+  inset: -110px;
+  will-change: transform;
+}
+
+.craft-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: var(--craft-grain);
+  background-size: 160px 160px;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+}
+
+.craft-fragment {
+  position: absolute;
+  color: var(--craft-ink);
+  will-change: transform;
+}
+
+/* ---------- paper ---------- */
+
+.craft-paper {
+  position: relative;
+  background-color: var(--craft-raised);
+  color: var(--craft-ink);
+  border: 1px solid var(--craft-hairline);
+  border-radius: 3px;
+  /* Faint inner edge shading so sheets read as paper rather than flat panels. */
+  box-shadow:
+    inset 0 0 0 1px rgb(244 247 251 / 0.04),
+    inset 0 0 26px rgb(5 18 44 / 0.35),
+    0 14px 30px -20px rgb(0 0 0 / 0.65);
+}
+
+.craft-paper--deep {
+  background-color: var(--craft-panel);
+}
+
+.craft-paper--kraft {
+  background-color: var(--craft-kraft);
+  color: var(--craft-kraft-ink);
+  border-color: rgb(59 47 28 / 0.18);
+  box-shadow:
+    inset 0 0 22px rgb(120 92 48 / 0.18),
+    0 12px 26px -18px rgb(0 0 0 / 0.6);
+}
+
+.craft-paper--grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: var(--craft-grain);
+  background-size: 160px 160px;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
+
+/* Hero sheets only: uneven deckled edges (clip-path drawn by PaperCard). */
+.craft-paper--deckled {
+  border: none;
+  filter: drop-shadow(0 16px 24px rgb(0 0 0 / 0.35));
+}
+
+/* Folded corner that lifts a little on hover. */
+.craft-fold {
+  overflow: visible;
+}
+
+.craft-fold::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(225deg, var(--craft-page) 50%, rgb(244 247 251 / 0.22) 50%, rgb(169 190 221 / 0.4));
+  border-bottom-left-radius: 3px;
+  box-shadow: -2px 2px 4px rgb(0 0 0 / 0.25);
+  transform-origin: top right;
+  transition: transform 200ms var(--craft-spring);
+}
+
+.craft-fold:hover::after {
+  transform: scale(1.35);
+}
+
+/* ---------- washi tape ---------- */
+
+.craft-tape {
+  position: absolute;
+  z-index: 2;
+  height: 24px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.08) 0 2px, transparent 2px 7px),
+    rgb(236 222 192 / 0.9);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+  /* Torn, zig-zag ends. */
+  clip-path: polygon(
+    0 8%, 3% 0, 6% 10%, 3% 22%, 6% 34%, 2% 46%, 6% 58%, 3% 70%, 6% 82%, 2% 94%, 4% 100%,
+    96% 100%, 98% 92%, 94% 80%, 98% 68%, 95% 56%, 99% 44%, 95% 32%, 98% 20%, 94% 8%, 97% 0
+  );
+}
+
+/* ---------- rubber stamp ---------- */
+
+.craft-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.7em;
+  border: 2.5px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--craft-mono);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  /* Speckled ink: a thresholded noise tile knocks small holes out of the stamp. */
+  -webkit-mask-image: var(--craft-specks);
+  mask-image: var(--craft-specks);
+  -webkit-mask-size: 70px 70px;
+  mask-size: 70px 70px;
+}
+
+.craft-stamp--amber {
+  color: var(--craft-amber);
+}
+
+.craft-stamp--red {
+  color: var(--craft-red);
+}
+
+.craft-stamp--ink {
+  color: var(--craft-ink);
+}
+
+/* ---------- physical keys ---------- */
+
+/* Element-level weight: beats the a/button resets, loses to Tailwind utilities (e.g. px-6). */
+:where(.craft-key):is(a, button, span, label) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  overflow: hidden;
+  border: 1px solid var(--craft-hairline);
+  border-radius: 6px;
+  background: var(--craft-panel);
+  color: var(--craft-ink);
+  font-family: var(--craft-sans);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 3px 0 0 #081b3c, 0 8px 16px -10px rgb(0 0 0 / 0.6);
+  transition: transform 160ms var(--craft-spring), box-shadow 160ms var(--craft-spring), border-color 160ms ease;
+}
+
+.craft-key:hover {
+  border-color: var(--craft-ink);
+}
+
+.craft-key:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 #081b3c, 0 3px 6px -4px rgb(0 0 0 / 0.6);
+  transition-duration: 90ms;
+  transition-timing-function: ease-out;
+}
+
+.craft-key:focus-visible {
+  outline: 2px solid var(--craft-amber);
+  outline-offset: 3px;
+}
+
+:where(.craft-key--primary):is(a, button, span, label) {
+  border-color: #ffd27a;
+  background: linear-gradient(180deg, #ffc566 0%, var(--craft-amber) 55%, #f4a334 100%);
+  color: #1a1300;
+  font-weight: 600;
+  box-shadow: 0 3px 0 0 #b56d0c, 0 10px 20px -12px rgb(255 166 43 / 0.75);
+}
+
+.craft-key--primary:hover {
+  border-color: #ffe2a8;
+}
+
+.craft-key--primary:active {
+  box-shadow: 0 1px 0 0 #b56d0c, 0 4px 8px -6px rgb(255 166 43 / 0.7);
+}
+
+/* Light sweep across the main amber key on hover. */
+.craft-key--primary::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  transform: skewX(-20deg);
+  transition: transform 600ms var(--craft-ease);
+  pointer-events: none;
+}
+
+.craft-key--primary:hover::after {
+  transform: translateX(420%) skewX(-20deg);
+}
+
+/* ---------- icons that redraw themselves ---------- */
+
+.craft-icon * {
+  transition: stroke 150ms ease;
+}
+
+.craft-draw-host:hover .craft-icon *,
+.craft-icon.is-drawing * {
+  stroke: var(--craft-amber);
+  stroke-dasharray: 1;
+  animation: craft-draw 700ms var(--craft-ease) both;
+}
+
+@keyframes craft-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------- index cards pinned to the grid ---------- */
+
+.craft-index-card {
+  transition: transform 220ms var(--craft-spring), box-shadow 220ms ease;
+}
+
+.craft-index-card:hover {
+  transform: translateY(-6px) rotate(0deg) !important;
+  box-shadow:
+    inset 0 0 26px rgb(5 18 44 / 0.35),
+    0 26px 40px -22px rgb(0 0 0 / 0.75);
+}
+
+.craft-pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffd896, var(--craft-amber) 45%, #a8640b);
+  box-shadow: 0 2px 3px rgb(0 0 0 / 0.45);
+}
+
+/* ---------- drafting crosshair readout ---------- */
+
+.craft-crosshair-zone {
+  cursor: crosshair;
+}
+
+.craft-crosshair-readout {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 50;
+  padding: 4px 8px;
+  border: 1px solid var(--craft-hairline);
+  border-radius: 3px;
+  background: rgb(14 42 87 / 0.92);
+  color: var(--craft-muted);
+  font-family: var(--craft-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+@media (hover: none) {
+  .craft-crosshair-readout {
+    display: none;
+  }
+}
+
+/* ---------- reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .craft-key,
+  .craft-key::after,
+  .craft-fold::after,
+  .craft-index-card {
+    transition: none !important;
+  }
+
+  .craft-draw-host:hover .craft-icon *,
+  .craft-icon.is-drawing * {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ import { BluebuildQuotaBadge } from "../components/bluebuild-quota-badge";
 import { themeBootstrapScript } from "../lib/theme";
 import { ThemeProvider } from "../lib/theme-provider";
 import "./globals.css";
+import "./craft.css";
 
 export const dynamic = "force-dynamic";
 
