@@ -847,6 +847,56 @@ def _schema_with_closed_objects(schema: Any) -> Any:
     return normalized
 
 
+_ANTHROPIC_UNSUPPORTED_SCHEMA_KEYWORDS = (
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
+    "minLength",
+    "maxLength",
+    "maxItems",
+)
+_SCHEMA_NAME_MAPS = {"properties", "$defs", "definitions", "patternProperties"}
+
+
+def _anthropic_output_schema(schema: Any) -> Any:
+    """Return a closed JSON schema without keywords Anthropic's output_config rejects.
+
+    Anthropic structured output does not accept numeric or length bounds
+    (e.g. "For 'number' type, properties exclusiveMinimum, maximum are not
+    supported"). Removed bounds are restated in the field description so the
+    model still sees them, and pydantic re-checks them on the response.
+    """
+    if isinstance(schema, list):
+        return [_anthropic_output_schema(item) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+
+    normalized: Dict[str, Any] = {}
+    for key, value in schema.items():
+        if key in _SCHEMA_NAME_MAPS and isinstance(value, dict):
+            normalized[key] = {name: _anthropic_output_schema(item) for name, item in value.items()}
+        else:
+            normalized[key] = _anthropic_output_schema(value)
+
+    removed = [
+        f"{keyword}={normalized.pop(keyword)}"
+        for keyword in _ANTHROPIC_UNSUPPORTED_SCHEMA_KEYWORDS
+        if keyword in normalized
+    ]
+    min_items = normalized.get("minItems")
+    if isinstance(min_items, int) and min_items > 1:
+        removed.append(f"minItems={normalized.pop('minItems')}")
+    if removed:
+        note = f"Constraints: {', '.join(removed)}."
+        description = normalized.get("description")
+        normalized["description"] = f"{description} {note}" if isinstance(description, str) and description else note
+    if normalized.get("type") == "object":
+        normalized["additionalProperties"] = False
+    return normalized
+
+
 def _is_anthropic_grammar_timeout(exc: Exception) -> bool:
     """True when Anthropic rejected the JSON-schema output mode itself.
 
@@ -861,6 +911,8 @@ def _is_anthropic_grammar_timeout(exc: Exception) -> bool:
         "Circular reference" in message
         or "Self-referencing" in message
         or "Invalid schema" in message
+        or "not supported" in message
+        or "output_config.format.schema" in message
     ):
         return True
     return False
@@ -1609,7 +1661,7 @@ class AnthropicProvider(StructuredLLMProvider):
             payload["output_config"] = {
                 "format": {
                     "type": "json_schema",
-                    "schema": _schema_with_closed_objects(schema_class.model_json_schema()),
+                    "schema": _anthropic_output_schema(schema_class.model_json_schema()),
                 }
             }
 
@@ -1637,7 +1689,7 @@ class AnthropicProvider(StructuredLLMProvider):
                         }
                     ]
                     logger.warning(
-                        "anthropic output_config grammar compilation timed out for %s; retrying with prompt-embedded schema.",
+                        "anthropic rejected output_config for %s; retrying with prompt-embedded schema.",
                         _schema_name(schema_class),
                     )
                     continue

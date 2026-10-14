@@ -28,6 +28,8 @@ from forma_core import llm_providers as lp
 from forma_core.llm import build_llm_provider, resolve_llm_runtime_config
 from forma_core.llm_providers import (
     LLMProviderOutputError,
+    _anthropic_output_schema,
+    _is_anthropic_grammar_timeout,
     _schema_with_closed_objects,
     _validate_structured_json,
 )
@@ -321,6 +323,46 @@ class StructuredRepairTests(unittest.TestCase):
                     assert_objects_closed(value, f"{path}[{index}]")
 
         assert_objects_closed(schema)
+
+    def test_anthropic_output_schema_drops_unsupported_bounds(self) -> None:
+        unsupported = {"minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "minLength", "maxLength"}
+        raw = MechanicalNotes.model_json_schema()
+        schema = _anthropic_output_schema(raw)
+
+        def keywords(node: Any, *, names: bool = False) -> set[str]:
+            found: set[str] = set()
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if not names:
+                        found.add(key)
+                    found |= keywords(value, names=not names and key in {"properties", "$defs"})
+            elif isinstance(node, list):
+                for value in node:
+                    found |= keywords(value)
+            return found
+
+        self.assertTrue(keywords(raw) & unsupported)
+        self.assertFalse(keywords(schema) & unsupported)
+        self.assertIn("Constraints:", json.dumps(schema))
+
+    def test_anthropic_output_schema_keeps_fields_named_like_keywords(self) -> None:
+        schema = _anthropic_output_schema({
+            "type": "object",
+            "properties": {"maximum": {"type": "number", "maximum": 5}},
+        })
+
+        self.assertIn("maximum", schema["properties"])
+        self.assertNotIn("maximum", schema["properties"]["maximum"])
+        self.assertFalse(schema["additionalProperties"])
+
+    def test_unsupported_schema_error_triggers_prompt_fallback(self) -> None:
+        error = RuntimeError(
+            "anthropic request failed with HTTP 400: output_config.format.schema: For 'number' type, "
+            "properties exclusiveMinimum, maximum are not supported"
+        )
+
+        self.assertTrue(_is_anthropic_grammar_timeout(error))
+        self.assertFalse(_is_anthropic_grammar_timeout(RuntimeError("anthropic request failed with HTTP 529")))
 
 
 if __name__ == "__main__":

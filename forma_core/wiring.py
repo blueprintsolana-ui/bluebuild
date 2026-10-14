@@ -293,6 +293,74 @@ def compile_wiring_intent(
     return WiringCompilationResult(nets=compiled, preserved_nets=preserved, rejected=rejected)
 
 
+ACTIVE_COMPONENT_CATEGORIES = {"microcontroller", "sensor", "display", "actuator"}
+SUPPLY_VOLTAGE_TOLERANCE = 0.25
+
+
+def _main_ground_net(ground_nets: Sequence[ConnectionNet]) -> Optional[ConnectionNet]:
+    if len(ground_nets) == 1:
+        return ground_nets[0]
+    named = [net for net in ground_nets if re.fullmatch(r"(NET_)?GND", net.net_id.upper())]
+    if len(named) == 1:
+        return named[0]
+    return max(ground_nets, key=lambda net: len(net.pins), default=None)
+
+
+def attach_unconnected_supply_pins(
+    components: Sequence[ComponentInstance],
+    nets: Sequence[ConnectionNet],
+) -> tuple[List[ConnectionNet], List[ValidationIssue]]:
+    """Join active parts with no supply connection to an unambiguous existing rail.
+
+    Only obvious cases are fixed without a model call: a part with no grounded
+    pin joins the main ground net, and a part with no powered pin joins the one
+    power net whose voltage matches a declared supply-input pin. Anything
+    ambiguous is left for the repair model. Each fix is reported as an INFO issue.
+    """
+    repaired = [net.model_copy(deep=True) for net in nets]
+    connected = {(pin.ref_des, pin.pin_id) for net in repaired for pin in net.pins}
+    ground_net = _main_ground_net([net for net in repaired if net.net_type.strip().lower() == "ground"])
+    power_nets = [
+        net for net in repaired
+        if net.net_type.strip().lower() == "power" and net.voltage is not None
+    ]
+    fixes: List[ValidationIssue] = []
+
+    def record_fix(component: ComponentInstance, pin_id: str, net: ConnectionNet) -> None:
+        net.pins.append(PinReference(ref_des=component.ref_des, pin_id=pin_id))
+        connected.add((component.ref_des, pin_id))
+        fixes.append(ValidationIssue(
+            severity="INFO",
+            category="Automatic Wiring Fix",
+            description=f"Connected {component.name} ({component.ref_des}) pin '{pin_id}' to '{net.name}' ({net.net_id}).",
+            troubleshooting="Confirm this supply connection against the part's datasheet before building.",
+        ))
+
+    for component in components:
+        if component.category.strip().lower() not in ACTIVE_COMPONENT_CATEGORIES:
+            continue
+        ground_pins = [pin for pin in component.pins if pin.pin_type.lower() == "ground"]
+        if ground_net is not None and ground_pins and not any(
+            (component.ref_des, pin.pin_id) in connected for pin in ground_pins
+        ):
+            record_fix(component, ground_pins[0].pin_id, ground_net)
+
+        power_pins = [pin for pin in component.pins if pin.pin_type.lower() == "power"]
+        if not power_pins or any((component.ref_des, pin.pin_id) in connected for pin in power_pins):
+            continue
+        for pin in power_pins:
+            if pin.voltage is None or pin.power_role in {"source", "regulated_output"}:
+                continue
+            matches = [
+                net for net in power_nets
+                if abs(float(net.voltage) - pin.voltage) <= SUPPLY_VOLTAGE_TOLERANCE
+            ]
+            if len(matches) == 1:
+                record_fix(component, pin.pin_id, matches[0])
+                break
+    return repaired, fixes
+
+
 def derive_pin_mappings(
     components: Sequence[ComponentInstance],
     nets: Iterable[ConnectionNet],

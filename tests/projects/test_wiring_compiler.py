@@ -6,6 +6,7 @@ from forma_core.validation import validate_circuit
 from forma_core.wiring import (
     NetIntent,
     WiringIntent,
+    attach_unconnected_supply_pins,
     build_endpoint_catalog,
     compile_wiring_intent,
     derive_pin_mappings,
@@ -272,6 +273,48 @@ class WiringCompilerTests(unittest.TestCase):
 
         self.assertEqual("unknown_pin_reference", wiring_failure_category(issue))
         self.assertEqual("missing_ground_net", wiring_failure_category(missing_ground))
+
+    def test_unconnected_supply_pins_join_unambiguous_rails(self) -> None:
+        nets = [
+            ConnectionNet(
+                net_id="NET_3V3",
+                name="3.3V Rail",
+                net_type="Power",
+                voltage=3.3,
+                pins=[PinReference(ref_des="U1", pin_id="3V3")],
+            ),
+            ConnectionNet(
+                net_id="NET_GND",
+                name="Ground",
+                net_type="Ground",
+                pins=[PinReference(ref_des="U1", pin_id="GND")],
+            ),
+        ]
+
+        repaired, fixes = attach_unconnected_supply_pins(_components(), nets)
+        endpoints = {net.net_id: {(pin.ref_des, pin.pin_id) for pin in net.pins} for net in repaired}
+
+        self.assertIn(("SEN1", "VCC"), endpoints["NET_3V3"])
+        self.assertIn(("SEN1", "GND"), endpoints["NET_GND"])
+        self.assertIn(("SEN2", "GND"), endpoints["NET_GND"])
+        # No 5V rail exists, so the 5V sensor is left for the repair model.
+        self.assertNotIn(("SEN2", "VCC"), endpoints["NET_3V3"])
+        self.assertEqual(3, len(fixes))
+        self.assertTrue(all(fix.severity == "INFO" for fix in fixes))
+        self.assertEqual(1, len(nets[0].pins))
+        unpowered = [issue for issue in validate_circuit(_components(), repaired) if issue.category == "Unpowered IC"]
+        self.assertEqual(["SEN2"], [issue.description.split("(")[1].split(")")[0] for issue in unpowered])
+
+    def test_unconnected_power_pin_skips_ambiguous_rails(self) -> None:
+        nets = [
+            ConnectionNet(net_id="NET_3V3_A", name="Rail A", net_type="Power", voltage=3.3, pins=[]),
+            ConnectionNet(net_id="NET_3V3_B", name="Rail B", net_type="Power", voltage=3.3, pins=[]),
+        ]
+
+        repaired, fixes = attach_unconnected_supply_pins(_components(), nets)
+
+        self.assertFalse(fixes)
+        self.assertEqual([[], []], [net.pins for net in repaired])
 
 
 if __name__ == "__main__":

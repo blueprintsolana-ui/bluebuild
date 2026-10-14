@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from types import SimpleNamespace
 
@@ -178,6 +179,75 @@ class WebResearchPartialGenerationTests(unittest.TestCase):
             actual_model="test-model",
             provider="test",
         )
+
+    @staticmethod
+    def supply_nets(*, include_controller: bool) -> list[ConnectionNet]:
+        controller = [PinReference(ref_des="U1", pin_id="VCC")] if include_controller else []
+        controller_ground = [PinReference(ref_des="U1", pin_id="GND")] if include_controller else []
+        return [
+            ConnectionNet(
+                net_id="NET_5V",
+                name="5V Rail",
+                net_type="Power",
+                voltage=5,
+                pins=[PinReference(ref_des="J1", pin_id="VCC"), *controller],
+            ),
+            ConnectionNet(
+                net_id="NET_GND",
+                name="Ground",
+                net_type="Ground",
+                pins=[PinReference(ref_des="J1", pin_id="GND"), *controller_ground],
+            ),
+        ]
+
+    def run_validation(self, pipeline: WebResearchHardwarePipeline, nets: list[ConnectionNet]):
+        components = component_selection().components
+        return pipeline._validate_and_repair(
+            "Build a four wheel robot",
+            project_plan(),
+            components,
+            json.dumps([component.model_dump(mode="json") for component in components]),
+            WiringWrapper(nets=nets, pin_mappings=[]),
+        )
+
+    def test_unambiguous_supply_gaps_are_fixed_without_a_repair_call(self) -> None:
+        pipeline, _saved = self.pipeline()
+        calls: list[int] = []
+        pipeline._repair_wiring = lambda *args: calls.append(1)
+
+        validation = self.run_validation(pipeline, self.supply_nets(include_controller=False))
+
+        self.assertEqual([], calls)
+        self.assertNotIn("Unpowered IC", {issue.category for issue in validation.issues})
+        self.assertIn("Automatic Wiring Fix", {issue.category for issue in validation.issues})
+
+    def test_wiring_repair_retries_until_critical_issues_clear(self) -> None:
+        pipeline, _saved = self.pipeline()
+        attempts: list[int] = []
+
+        def repair(plan, components_json, nets, issues, rejected_intents):
+            attempts.append(len(attempts) + 1)
+            fixed = self.supply_nets(include_controller=True) if len(attempts) == 2 else list(nets)
+            return WiringWrapper(nets=fixed, pin_mappings=[])
+
+        pipeline._repair_wiring = repair
+        empty = ConnectionNet(net_id="NET_EMPTY", name="Empty", net_type="Digital", pins=[])
+
+        validation = self.run_validation(pipeline, [empty])
+
+        self.assertEqual([1, 2], attempts)
+        self.assertEqual({"NET_5V", "NET_GND"}, {net.net_id for net in validation.nets})
+        self.assertNotIn("Empty Net", {issue.category for issue in validation.issues})
+
+    def test_failed_repair_call_keeps_best_netlist_instead_of_failing(self) -> None:
+        pipeline, _saved = self.pipeline()
+        pipeline._repair_wiring = lambda *args: (_ for _ in ()).throw(RuntimeError("provider down"))
+        empty = ConnectionNet(net_id="NET_EMPTY", name="Empty", net_type="Digital", pins=[])
+
+        validation = self.run_validation(pipeline, [empty])
+
+        self.assertFalse(validation.is_valid)
+        self.assertEqual(["NET_EMPTY"], [net.net_id for net in validation.nets])
 
     def test_wiring_failure_preserves_bom_and_mechanical_artifacts(self) -> None:
         pipeline, saved = self.pipeline()

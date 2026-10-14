@@ -69,16 +69,26 @@ from forma_core.validation import (
     validate_circuit,
 )
 from forma_core.wiring import (
+    NetIntent,
     WiringIntent,
+    attach_unconnected_supply_pins,
     build_endpoint_catalog,
     compile_wiring_intent,
     derive_pin_mappings,
     endpoint_catalog_prompt,
+    make_endpoint_id,
     wiring_failure_category,
 )
 
 
 logger = logging.getLogger(__name__)
+
+# Each round is one model call; the whole design must fit the hosting time limit.
+WIRING_REPAIR_MAX_ROUNDS = 2
+
+
+def _critical_count(issues: List[ValidationIssue]) -> int:
+    return sum(1 for issue in issues if issue.severity.upper() == "CRITICAL")
 
 
 class WebProjectPlan(BaseModel):
@@ -105,6 +115,7 @@ class WiringWrapper(BaseModel):
     nets: List[ConnectionNet]
     pin_mappings: List[PinMappingEntry]
     intent_issues: List[ValidationIssue] = Field(default_factory=list)
+    rejected_intents: List[NetIntent] = Field(default_factory=list)
 
 
 class AssemblyWrapper(BaseModel):
@@ -382,32 +393,11 @@ class WebResearchHardwarePipeline:
 
         logger.info("Running circuit validation checks on web-researched netlist...")
         with agent_pipeline_step(self.workflow_id, "validation_repair"):
-            validation_issues = [
-                *wiring.intent_issues,
-                *validate_circuit(components, nets, plan.requirements, prompt=user_prompt),
-            ]
-            if validation_issues:
-                emit_agent_pipeline_event(
-                    self.workflow_id,
-                    "validation_repair",
-                    "diagnostics",
-                    details={
-                        "failure_categories": sorted({
-                            wiring_failure_category(issue) for issue in validation_issues
-                        }),
-                    },
-                )
-            is_valid = not any(issue.severity.upper() == "CRITICAL" for issue in validation_issues)
-            if not is_valid:
-                logger.info("Invoking Validation + Auto-Correction Agent...")
-                corrected = self._repair_wiring(plan, components_json, nets, validation_issues)
-                nets = corrected.nets
-                pin_mappings = corrected.pin_mappings
-                validation_issues = [
-                    *corrected.intent_issues,
-                    *validate_circuit(components, nets, plan.requirements, prompt=user_prompt),
-                ]
-                is_valid = not any(issue.severity.upper() == "CRITICAL" for issue in validation_issues)
+            validation = self._validate_and_repair(user_prompt, plan, components, components_json, wiring)
+            nets = validation.nets
+            pin_mappings = validation.pin_mappings
+            validation_issues = validation.issues
+            is_valid = validation.is_valid
 
         total_cost = sum(
             component.unit_price * component_instance_count(component)
@@ -564,44 +554,9 @@ class WebResearchHardwarePipeline:
             schema=WiringWrapper,
         )
 
-        def validate_and_repair() -> ValidationStageOutput:
-            nets = list(wiring.nets)
-            pin_mappings = list(wiring.pin_mappings)
-            issues = [
-                *wiring.intent_issues,
-                *validate_circuit(components, nets, plan.requirements, prompt=user_prompt),
-            ]
-            if issues:
-                emit_agent_pipeline_event(
-                    self.workflow_id,
-                    "validation_repair",
-                    "diagnostics",
-                    details={
-                        "failure_categories": sorted({
-                            wiring_failure_category(issue) for issue in issues
-                        }),
-                    },
-                )
-            is_valid = not any(issue.severity.upper() == "CRITICAL" for issue in issues)
-            if not is_valid:
-                corrected = self._repair_wiring(plan, components_json, nets, issues)
-                nets = corrected.nets
-                pin_mappings = corrected.pin_mappings
-                issues = [
-                    *corrected.intent_issues,
-                    *validate_circuit(components, nets, plan.requirements, prompt=user_prompt),
-                ]
-                is_valid = not any(issue.severity.upper() == "CRITICAL" for issue in issues)
-            return ValidationStageOutput(
-                nets=nets,
-                pin_mappings=pin_mappings,
-                issues=issues,
-                is_valid=is_valid,
-            )
-
         validation = stage_run.run(
             "validation_repair",
-            validate_and_repair,
+            lambda: self._validate_and_repair(user_prompt, plan, components, components_json, wiring),
             schema=ValidationStageOutput,
         )
         mechanical = stage_run.run(
@@ -962,6 +917,74 @@ class WebResearchHardwarePipeline:
             nets=compilation.nets,
             pin_mappings=derive_pin_mappings(components, compilation.nets),
             intent_issues=compilation.issues,
+            rejected_intents=[rejected.intent for rejected in compilation.rejected],
+        )
+
+    def _check_wiring(
+        self,
+        user_prompt: str,
+        plan: WebProjectPlan,
+        components: List[ComponentInstance],
+        nets: List[ConnectionNet],
+        intent_issues: List[ValidationIssue],
+    ) -> tuple[List[ConnectionNet], List[ValidationIssue]]:
+        """Apply unambiguous supply fixes, then validate the resulting netlist."""
+        nets, fixes = attach_unconnected_supply_pins(components, nets)
+        issues = [
+            *intent_issues,
+            *validate_circuit(components, nets, plan.requirements, prompt=user_prompt),
+            *fixes,
+        ]
+        return nets, issues
+
+    def _validate_and_repair(
+        self,
+        user_prompt: str,
+        plan: WebProjectPlan,
+        components: List[ComponentInstance],
+        components_json: str,
+        wiring: WiringWrapper,
+    ) -> ValidationStageOutput:
+        nets, issues = self._check_wiring(user_prompt, plan, components, list(wiring.nets), wiring.intent_issues)
+        if issues:
+            emit_agent_pipeline_event(
+                self.workflow_id,
+                "validation_repair",
+                "diagnostics",
+                details={
+                    "failure_categories": sorted({
+                        wiring_failure_category(issue) for issue in issues
+                    }),
+                },
+            )
+
+        best_nets, best_issues = nets, issues
+        rejected_intents = list(wiring.rejected_intents)
+        for repair_round in range(1, WIRING_REPAIR_MAX_ROUNDS + 1):
+            best_critical = _critical_count(best_issues)
+            if best_critical == 0:
+                break
+            logger.info(
+                "Wiring repair round %d of %d (%d critical issues).",
+                repair_round,
+                WIRING_REPAIR_MAX_ROUNDS,
+                best_critical,
+            )
+            try:
+                corrected = self._repair_wiring(plan, components_json, best_nets, best_issues, rejected_intents)
+            except Exception as exc:
+                logger.warning("Wiring repair round %d failed; keeping the best netlist so far: %s", repair_round, exc)
+                break
+            nets, issues = self._check_wiring(user_prompt, plan, components, corrected.nets, corrected.intent_issues)
+            rejected_intents = list(corrected.rejected_intents)
+            if _critical_count(issues) < best_critical:
+                best_nets, best_issues = nets, issues
+
+        return ValidationStageOutput(
+            nets=best_nets,
+            pin_mappings=derive_pin_mappings(components, best_nets),
+            issues=best_issues,
+            is_valid=_critical_count(best_issues) == 0,
         )
 
     def _repair_wiring(
@@ -970,26 +993,57 @@ class WebResearchHardwarePipeline:
         components_json: str,
         nets: List[ConnectionNet],
         issues: List[ValidationIssue],
+        rejected_intents: Optional[List[NetIntent]] = None,
     ) -> WiringWrapper:
         components = [ComponentInstance.model_validate(item) for item in json.loads(components_json)]
+        catalog = build_endpoint_catalog(components)
+        used_signal_endpoints = {
+            make_endpoint_id(pin.ref_des, pin.pin_id): net.net_id
+            for net in nets
+            for pin in net.pins
+            if (entry := catalog.get(make_endpoint_id(pin.ref_des, pin.pin_id))) is not None
+            and entry.pin_type.lower() not in {"power", "ground", "passive"}
+        }
+        critical_issues = [issue for issue in issues if issue.severity.upper() == "CRITICAL"]
         prompt = f"""
         You are a Wiring Intent Auto-Correction Agent.
-        Correct only the rejected or invalid nets using the validation report.
-        Return replacement intents for existing canonical nets using replace_net_id. Omit valid nets.
+        Fix every CRITICAL validation issue below with the smallest set of wiring changes.
+
+        How to respond:
+        - To change an existing net, return an intent with replace_net_id set to that net's ID. The
+          replacement REPLACES the whole net, so list every endpoint the net should keep plus any you add.
+        - To add a connection that does not exist yet, return a new intent and leave replace_net_id empty.
+        - Omit nets that are already correct; they are kept unchanged.
+        - Use endpoint IDs exactly as written in the endpoint catalog.
+
+        Electrical rules:
+        - Every active part (controller, sensor, display, actuator) needs one power pin on a power net of
+          matching voltage and one ground pin on the ground net.
+        - Each power net has exactly one endpoint whose power_role is source or regulated_output.
+        - Never put power and ground endpoints in the same net.
+        - A signal endpoint (not power, ground, or passive) may belong to only one net. If a signal pin is
+          already used, pick a different free compatible pin, or merge the connections into one shared bus net.
 
         Requirements:
         {plan.requirements.model_dump_json()}
 
         Endpoint catalog:
-        {json.dumps(endpoint_catalog_prompt(build_endpoint_catalog(components)), indent=2)}
+        {json.dumps(endpoint_catalog_prompt(catalog), indent=2)}
 
-        Previous nets:
+        Current nets:
         {json.dumps([net.model_dump() for net in nets], indent=2)}
 
-        Validation issues:
-        {json.dumps([issue.model_dump() for issue in issues], indent=2)}
+        Signal endpoints already in use (endpoint -> net):
+        {json.dumps(used_signal_endpoints, indent=2)}
 
-        Use endpoint_ids from the catalog only. Keep valid existing nets unchanged. Return WiringIntent.
+        Connections that were requested earlier but rejected, and are therefore missing (re-add them in a
+        corrected form when they are still needed):
+        {json.dumps([intent.model_dump() for intent in rejected_intents or []], indent=2)}
+
+        CRITICAL validation issues to fix:
+        {json.dumps([issue.model_dump() for issue in critical_issues], indent=2)}
+
+        Return WiringIntent.
         """
         repair_intent: WiringIntent = self._call_llm_structured(
             prompt,
@@ -1002,6 +1056,7 @@ class WebResearchHardwarePipeline:
             nets=merged_nets,
             pin_mappings=derive_pin_mappings(components, merged_nets),
             intent_issues=compilation.issues,
+            rejected_intents=[rejected.intent for rejected in compilation.rejected],
         )
 
     def _generate_mechanical(
