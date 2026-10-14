@@ -3209,6 +3209,18 @@ def iterate_project_endpoint(
 
     try:
         iterator = ProjectIterator(provider_name=request.provider, model_name=request.model, settings=settings)
+        if not request.confirm_new_product:
+            scope = iterator.classify_change_scope(current_ir, request.instruction)
+            if scope.scope == "new_product":
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "code": "new_design_suggested",
+                        "message": "That sounds like a different product, so this design was left unchanged.",
+                        "reason": scope.reason,
+                        "suggested_prompt": request.instruction,
+                    },
+                )
         revised_ir = iterator.iterate_project(
             current_ir,
             request.instruction,

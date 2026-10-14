@@ -34,6 +34,8 @@ export type ConversationMessage = {
   contextSuggestions?: string[];
   buildPlanId?: string | null;
   buildJobId?: string | null;
+  /** Set when a design edit looked like a different product; holds the user's text. */
+  newDesignPrompt?: string | null;
 };
 
 type AgentRuntimeOption = {
@@ -82,6 +84,8 @@ export default function ConversationMessageList({
   buildNowLoading = false,
   onBuildNow,
   assistantLabel = "Bluebuild",
+  onStartNewDesign,
+  onApplyChangeAnyway,
 }: {
   messages: ConversationMessage[];
   renderPipelineProgress: (message: ConversationMessage) => ReactNode;
@@ -93,6 +97,8 @@ export default function ConversationMessageList({
   buildNowLoading?: boolean;
   onBuildNow?: () => void;
   assistantLabel?: string;
+  onStartNewDesign?: (prompt: string) => void;
+  onApplyChangeAnyway?: (prompt: string) => void;
 }) {
   const [runtimeOptions, setRuntimeOptions] = useState<AgentRuntimeOption[]>([]);
   const [selectedRuntimeId, setSelectedRuntimeId] = useState("");
@@ -249,6 +255,31 @@ export default function ConversationMessageList({
                   </Link>
                 )}
               </div>
+            </div>
+          )}
+          {!isUser && message.newDesignPrompt && (onStartNewDesign || onApplyChangeAnyway) && (
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Choose what to do with this request">
+              {onStartNewDesign && (
+                <button
+                  type="button"
+                  onClick={() => onStartNewDesign(message.newDesignPrompt || "")}
+                  disabled={isLoading}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  Start a new design with this
+                </button>
+              )}
+              {onApplyChangeAnyway && (
+                <button
+                  type="button"
+                  onClick={() => onApplyChangeAnyway(message.newDesignPrompt || "")}
+                  disabled={isLoading}
+                  className="inline-flex h-8 items-center rounded-lg border border-white/10 px-3 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Change this design anyway
+                </button>
+              )}
             </div>
           )}
           {!isUser && message.id === latestChoiceMessageId && Boolean(message.contextSuggestions?.length) && (

@@ -256,6 +256,8 @@ type ChatMessage = {
   contextSuggestions?: string[];
   buildPlanId?: string | null;
   buildJobId?: string | null;
+  /** Set when a design edit looked like a different product; holds the user's text. */
+  newDesignPrompt?: string | null;
 };
 
 type ActiveGenerationRun = {
@@ -4635,8 +4637,11 @@ export function FormaWorkspace({
     }
   };
 
-  const handleProjectChatGenerate = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleProjectChatGenerate = async (
+    event: React.FormEvent | null,
+    override?: { message: string; confirmNewProduct?: boolean },
+  ) => {
+    event?.preventDefault();
     if (generationRunsRef.current.has(currentProjectChatId || activeChatId)) return;
     if (selectedImage || selectedDocument) {
       if (!currentProjectId || !currentUserOwnsProject) return;
@@ -4710,7 +4715,7 @@ export function FormaWorkspace({
     }
     if (!currentProjectId || !projectIR) return;
 
-    const userMessage = projectChatInput.trim();
+    const userMessage = (override?.message ?? projectChatInput).trim();
     if (!userMessage) return;
 
     const sourceProjectId = currentProjectId;
@@ -4754,6 +4759,7 @@ export function FormaWorkspace({
           provider: selectedGenerationLlm.provider,
           model: selectedGenerationLlm.model,
           save: true,
+          confirm_new_product: Boolean(override?.confirmNewProduct),
         }),
       });
 
@@ -4764,6 +4770,14 @@ export function FormaWorkspace({
           console.error("Bluebuild API debug trace", apiError);
         }
         window.dispatchEvent(new Event("bluebuild:refresh"));
+        if (apiError.code === "new_design_suggested") {
+          updateThreadMessage(sourceChatId, assistantMessageId, {
+            content: `That sounds like a different product from ${projectTitle || "this design"}, so I left it unchanged. Start a new design for it, or apply it here as a change.`,
+            status: "idle",
+            newDesignPrompt: userMessage,
+          });
+          return;
+        }
         throw new Error(compactDiagnosticText(apiError.message) || apiError.message);
       }
 
@@ -6639,6 +6653,8 @@ export function FormaWorkspace({
                 input={projectChatInput}
                 setInput={setProjectChatInput}
                 onSubmit={handleProjectChatGenerate}
+                onStartNewDesign={(text) => window.location.assign(`/app?prompt=${encodeURIComponent(text)}`)}
+                onApplyChangeAnyway={(text) => { void handleProjectChatGenerate(null, { message: text, confirmNewProduct: true }); }}
                 attachmentControls={{
                   imageInputRef: fileInputRefSidebar,
                   onImageChange: handleImageChange,
@@ -8027,6 +8043,8 @@ function ChatWorkspace({
   activeNamespaceName,
   onNamespaceChange,
   projectContent,
+  onStartNewDesign,
+  onApplyChangeAnyway,
 }: {
   history: ProjectHistoryConfig;
   onOpenSidebar: () => void;
@@ -8040,6 +8058,8 @@ function ChatWorkspace({
   input: string;
   setInput: (value: string) => void;
   onSubmit: (event: React.FormEvent) => void;
+  onStartNewDesign?: (prompt: string) => void;
+  onApplyChangeAnyway?: (prompt: string) => void;
   attachmentControls: ChatAttachmentControls;
   onImagePaste: React.ClipboardEventHandler<HTMLTextAreaElement>;
   notice: string | null;
@@ -8138,6 +8158,8 @@ function ChatWorkspace({
                 <ConversationMessageList
                   messages={messages}
                   renderPipelineProgress={renderPipelineProgress}
+                  onStartNewDesign={readOnly ? undefined : onStartNewDesign}
+                  onApplyChangeAnyway={readOnly ? undefined : onApplyChangeAnyway}
                   variant="project"
                    emptyMessage="This chat has no project messages yet."
                    isLoading={readOnly ? false : isLoading}

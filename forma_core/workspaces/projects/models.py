@@ -959,6 +959,10 @@ class IterateProjectRequest(BaseModel):
         None,
         description="Optional stable key used to replay a saved iteration without creating another revision.",
     )
+    confirm_new_product: bool = Field(
+        False,
+        description="Apply the change even when it looks like a request for a different product.",
+    )
 
     @field_validator("instruction", mode="before")
     @classmethod

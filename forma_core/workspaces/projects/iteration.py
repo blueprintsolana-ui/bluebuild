@@ -5,7 +5,9 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 from forma_core.llm import (
     LLMProviderConfigError,
@@ -239,6 +241,8 @@ def _should_preserve_output_metadata_key(key: str) -> bool:
         "firecrawl_research",
         "operation_statuses",
         "operation_summary",
+        # The 3D product model stays with the renders it was drawn alongside.
+        "product_model",
         "source_usage",
         "tavily_research",
     }:
@@ -537,6 +541,37 @@ def _dedupe_validation_issues(issues: list[Any]) -> list[Any]:
     return deduped
 
 
+class ChangeScope(BaseModel):
+    scope: Literal["change", "new_product"] = Field(
+        ...,
+        description="change: the request modifies this product. new_product: it describes a different product.",
+    )
+    reason: str = Field("", description="One short sentence explaining the decision")
+
+
+def change_scope_prompt(current_ir: HardwareIntermediateRepresentation, instruction: str) -> str:
+    overview = current_ir.overview
+    product = {
+        "title": getattr(overview, "title", "") if overview else "",
+        "description": getattr(overview, "description", "") if overview else "",
+        "category": getattr(overview, "category", "") if overview else "",
+    }
+    return f"""
+    A user is chatting with a hardware design and sent a message. Decide whether the message asks to change
+    THIS product (add, remove or swap features, parts, size, materials, power, wiring, enclosure, and so on) or
+    describes a DIFFERENT product that should start a new design.
+
+    Treat it as a change whenever it plausibly modifies, extends or refines the current product, even if the
+    change is large. Only answer new_product when the message clearly describes a product with a different
+    purpose, for example asking for a fridge-magnet timer while the current design is a door lock.
+
+    Current product: {json.dumps(product, ensure_ascii=False)}
+    Message: {instruction!r}
+
+    Return ChangeScope.
+    """
+
+
 class ProjectIterator:
     """Provider-agnostic project revision engine for HardwareIntermediateRepresentation documents."""
 
@@ -571,6 +606,26 @@ class ProjectIterator:
             "operation": "project_iteration",
             "use_simulation": self.use_simulation,
         }
+
+    def classify_change_scope(
+        self,
+        current_ir: HardwareIntermediateRepresentation | Dict[str, Any],
+        instruction: str,
+    ) -> ChangeScope:
+        """Check whether a chat message edits this product or asks for a different one.
+
+        Fails open: when no live model is available or the call fails, it is treated as a change.
+        """
+        if self.use_simulation:
+            return ChangeScope(scope="change", reason="No live model to check the request.")
+        try:
+            return self.llm_provider.generate_structured(
+                change_scope_prompt(coerce_hardware_ir(current_ir), instruction),
+                ChangeScope,
+            )
+        except Exception as exc:
+            logger.warning("Change scope check failed; treating the request as a change: %s", exc)
+            return ChangeScope(scope="change", reason="The request could not be checked.")
 
     def iterate_project(
         self,
