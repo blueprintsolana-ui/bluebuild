@@ -65,6 +65,7 @@ declare module "lucide-react" {
   export const Printer: LucideIcon;
   export const Radio: LucideIcon;
   export const RefreshCw: LucideIcon;
+  export const Rocket: LucideIcon;
   export const Save: LucideIcon;
   export const Search: LucideIcon;
   export const Share2: LucideIcon;

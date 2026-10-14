@@ -193,6 +193,7 @@ from apps.api.auth import (
     require_user_context,
 )
 from apps.api.security import SecurityLimitsMiddleware, cors_origins, security_config
+from apps.api.bluebuild_launchpad import router as launchpad_router
 from apps.api.bluebuild_tiers import BluebuildQuotaMiddleware, router as bluebuild_router
 from apps.api.project_deletion import (
     DELETION_POLICY_VERSION,
@@ -383,6 +384,7 @@ app.include_router(cli_credentials_router, dependencies=[Depends(require_client_
 app.include_router(version_router)
 app.include_router(opencode_router)
 app.include_router(bluebuild_router)
+app.include_router(launchpad_router)
 
 
 def _deployment_runtime_config(llm_config: Dict[str, Any]) -> Dict[str, Any]:

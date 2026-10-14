@@ -21,6 +21,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { DesignCoinCard } from "../../components/design-coin-card";
 import ImageLightbox from "../../components/image-lightbox";
 import { isHardwareReferenceCandidate, type ProjectImageCandidate } from "../../lib/project-images";
 import { resolveProductModel } from "../../lib/product-model";
@@ -74,6 +75,7 @@ export function OverviewPanel({
   systemArchitecture,
   mechanical = null,
   components = [],
+  projectId = null,
   showModelName = false,
   showImageSection = true,
   canManageProgressiveReview = false,
@@ -90,6 +92,7 @@ export function OverviewPanel({
   systemArchitecture?: Record<string, any> | null;
   mechanical?: Record<string, any> | null;
   components?: any[];
+  projectId?: string | null;
   showModelName?: boolean;
   showImageSection?: boolean;
   canManageProgressiveReview?: boolean;
@@ -348,6 +351,15 @@ export function OverviewPanel({
               </span>
             ))}
           </div>
+
+          {projectId && (
+            <DesignCoinCard
+              projectId={projectId}
+              title={title}
+              description={description}
+              images={heroImages.map((candidate) => ({ src: candidate.src, label: candidate.label }))}
+            />
+          )}
 
           <div className="mt-6">
             <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--forma-text-muted)]">Technical Description</div>

@@ -5868,6 +5868,7 @@ export function FormaWorkspace({
             metadata={projectIR?.assembly_metadata || {}}
             systemArchitecture={projectIR?.system_architecture || null}
             mechanical={projectIR?.mechanical || null}
+            projectId={currentProjectId}
             components={Array.isArray(projectIR?.components) ? projectIR.components : EMPTY_OVERVIEW_COMPONENTS}
             showModelName={formaDevMode}
             showImageSection={showProductImageSection}
