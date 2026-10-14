@@ -12,6 +12,12 @@ export type PitchCopy = {
   use_cases?: { title: string; detail: string }[];
   audience?: string;
   materials?: string[];
+  problem?: string;
+  how_it_works?: string[];
+  target_market?: string;
+  production_estimates?: { volume: string; unit_cost_usd: number; notes?: string }[];
+  tooling_cost_usd?: number | null;
+  manufacturing_notes?: string[];
 };
 
 export type CoinPitch = {
@@ -24,6 +30,7 @@ export type CoinPitch = {
   specs?: PitchSpec[];
   parts?: { name: string; category: string; count: number }[];
   fabrication?: string[];
+  subsystems?: { name: string; purpose: string }[];
   product_model?: unknown;
   mechanical?: unknown;
   components?: unknown[];

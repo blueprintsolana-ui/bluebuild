@@ -173,7 +173,7 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
     if (!publicKey || !logoSrc || formProblem) return;
     setError(null);
     try {
-      setPhase({ step: "working", message: "Preparing your coin's logo and details…" });
+      setPhase({ step: "working", message: "Building your pitch deck and coin details (about a minute)…" });
       const token = await getToken();
       const mint = Keypair.generate();
       const imageData = await imageToLogoDataUrl(logoSrc);
@@ -260,7 +260,7 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
         }
       }
 
-      setPhase({ step: "working", message: "Recording your coin and building its product page…" });
+      setPhase({ step: "working", message: "Recording your coin on Bluebuild…" });
       let coin: LaunchedCoin | undefined;
       for (let attempt = 0; attempt < 12 && !coin; attempt += 1) {
         const result = await confirmLaunch(prepared.launch_id, createSignature, await getToken());
@@ -340,7 +340,7 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
                   rel="noreferrer"
                   className="inline-flex h-11 items-center rounded-lg border border-[var(--forma-border)] px-4 text-sm font-medium text-[var(--forma-text-strong)]"
                 >
-                  Open product page
+                  Open pitch deck
                 </a>
               )}
               <button
@@ -472,15 +472,15 @@ function LaunchCoinDialogBody({ projectId, initialForm, images, maxInitialBuySol
                 </div>
               </section>
 
-              <section aria-label="Links" className="grid gap-3 sm:grid-cols-3">
-                <p className="text-[11px] leading-5 text-[var(--forma-text-muted)] sm:col-span-3">
-                  Leave the website empty and your coin links to a Bluebuild product page for this design, with its renders, 3D
-                  model, use cases and specs.
-                </p>
-                <label className={labelClass}>
-                  4. Website <span className="normal-case tracking-normal">(optional)</span>
-                  <input className={inputClass} value={form.website} onChange={update("website")} placeholder="Bluebuild product page" disabled={busy} />
-                </label>
+              <section aria-label="Links" className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-[rgb(255_181_71/0.35)] bg-[rgb(255_181_71/0.06)] p-3 text-xs leading-5 text-[var(--forma-text-secondary)] sm:col-span-2">
+                  <div className={labelClass}>4. Website</div>
+                  <p className="mt-1">
+                    <span className="font-semibold text-[var(--forma-text-strong)]">Your coin&apos;s pitch deck, added automatically.</span>{" "}
+                    Bluebuild builds a page for this design with its renders, 3D model, use cases, specs and production costs,
+                    and sets it as the coin&apos;s website. It can&apos;t be changed or removed.
+                  </p>
+                </div>
                 <label className={labelClass}>
                   X / Twitter <span className="normal-case tracking-normal">(optional)</span>
                   <input className={inputClass} value={form.twitter} onChange={update("twitter")} placeholder="@handle" disabled={busy} />

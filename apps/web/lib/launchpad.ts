@@ -112,7 +112,6 @@ export function prepareLaunch(
         name: form.name,
         symbol: form.symbol,
         description: form.description,
-        website: form.website,
         twitter: form.twitter,
         telegram: form.telegram,
         initial_buy_sol: form.initialBuySol || "0",

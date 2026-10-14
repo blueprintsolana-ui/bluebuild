@@ -4,7 +4,6 @@ export type LaunchForm = {
   name: string;
   symbol: string;
   description: string;
-  website: string;
   twitter: string;
   telegram: string;
   initialBuySol: string;
@@ -20,13 +19,12 @@ export function suggestTicker(title: string): string {
   return ticker.slice(0, 6) || "COIN";
 }
 
-/** Website starts empty: the backend then points the coin at its Bluebuild product page. */
+/** The coin's website is always its Bluebuild pitch deck, so it isn't part of the form. */
 export function defaultLaunchForm(title: string, description: string): LaunchForm {
   return {
     name: title.trim().slice(0, 32),
     symbol: suggestTicker(title),
     description: description.trim().slice(0, 500),
-    website: "",
     twitter: "",
     telegram: "",
     initialBuySol: "0",

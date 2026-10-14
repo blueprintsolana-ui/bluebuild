@@ -74,7 +74,7 @@ class LaunchValidationTests(unittest.TestCase):
         details = launchpad.normalize_launch(launch_payload())
 
         self.assertEqual("SIP", details.symbol)
-        self.assertEqual("https://bluebuild.example/project/abc", details.website)
+        self.assertIsNone(details.website, "the website is always set to the pitch deck, never taken from the request")
         self.assertEqual("https://x.com/smartbottle", details.twitter)
         self.assertEqual("https://t.me/smartbottlechat", details.telegram)
         self.assertEqual(0.5, details.initial_buy_sol)
@@ -108,6 +108,7 @@ class LaunchValidationTests(unittest.TestCase):
 
     def test_metadata_matches_pump_fun_fields(self) -> None:
         details = launchpad.normalize_launch(launch_payload(telegram=""))
+        details.website = "https://bluebuild.example/coin/abc"
         metadata = launchpad.build_metadata(details, "https://cdn.example/logo.png", "https://bluebuild.example")
 
         self.assertEqual({
@@ -117,7 +118,7 @@ class LaunchValidationTests(unittest.TestCase):
             "image": "https://cdn.example/logo.png",
             "showName": True,
             "createdOn": "https://bluebuild.example",
-            "website": "https://bluebuild.example/project/abc",
+            "website": "https://bluebuild.example/coin/abc",
             "twitter": "https://x.com/smartbottle",
         }, metadata)
 
@@ -153,17 +154,19 @@ class LaunchpadEndpointTests(unittest.TestCase):
         main.app.dependency_overrides[optional_user_context] = lambda: self.owner
         self.addCleanup(main.app.dependency_overrides.clear)
         project = SimpleNamespace(project_id="project-1", owner_user_id="owner", visibility="public")
+        self.real_build_pitch_deck = launchpad._build_pitch_deck
         for target, value in (
             ("_STORE", launchpad._SQLiteLaunchStore(self.temp.name, "http://testserver")),
             ("launchpad_enabled", lambda: True),
             ("deployed_auth_required", lambda: False),
             ("_resolve_owner", lambda project_id, user: project),
             ("_resolve_reader", lambda project_id, user: project),
+            ("_build_pitch_deck", lambda project_id, user, launch_id, coin_name: {"title": "Stub deck"}),
         ):
             patcher = patch.object(launchpad, target, value)
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.client = TestClient(main.app)
+        self.client = TestClient(main.app, headers={"Origin": "https://bluebuild.example"})
 
     def test_prepare_confirm_then_show_the_coin_on_the_design(self) -> None:
         before = self.client.get("/launchpad/projects/project-1").json()
@@ -204,11 +207,12 @@ class LaunchpadEndpointTests(unittest.TestCase):
             "assembly": [{"step_num": 1}],
             "assembly_metadata": {"product_visual_sequence": [{"view_id": "case", "label": "Front", "data": PNG_DATA_URL}]},
         }
-        with patch("apps.api.main.get_project_endpoint", return_value={"project_ir": design}),                 patch("apps.api.bluebuild_pitch.write_pitch_copy", return_value={"tagline": "Know your water."}):
+        with patch("apps.api.main.get_project_endpoint", return_value={"project_ir": design}), \
+                patch("apps.api.bluebuild_pitch.write_pitch_copy", return_value={"tagline": "Know your water."}), \
+                patch.object(launchpad, "_build_pitch_deck", self.real_build_pitch_deck):
             prepared = self.client.post(
                 "/launchpad/projects/project-1/prepare",
-                json=launch_payload(website=""),
-                headers={"Origin": "https://bluebuild.example"},
+                json=launch_payload(website="https://someone-else.example"),
             ).json()
             metadata = self.client.get(prepared["metadata_uri"].removeprefix("http://testserver")).json()
             self.assertEqual(f"https://bluebuild.example/coin/{MINT}", metadata["website"])
@@ -224,6 +228,13 @@ class LaunchpadEndpointTests(unittest.TestCase):
         self.assertEqual(1, len(pitch["images"]))
         self.assertEqual(200, self.client.get(pitch["images"][0]["url"].removeprefix("http://testserver")).status_code)
         self.assertEqual(404, self.client.get("/launchpad/coins/9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin").status_code)
+
+    def test_a_failed_pitch_deck_stops_the_launch_before_the_wallet_step(self) -> None:
+        with patch.object(launchpad, "_build_pitch_deck", side_effect=RuntimeError("storage down")):
+            refused = self.client.post("/launchpad/projects/project-1/prepare", json=launch_payload())
+
+        self.assertEqual(503, refused.status_code)
+        self.assertEqual("pitch_deck_failed", refused.json()["detail"]["code"])
 
     def test_disabled_launchpad_hides_the_button_and_refuses_launches(self) -> None:
         with patch.object(launchpad, "launchpad_enabled", return_value=False):

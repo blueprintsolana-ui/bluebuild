@@ -218,7 +218,7 @@ def normalize_launch(payload: Dict[str, Any]) -> LaunchDetails:
         name=name,
         symbol=symbol,
         description=description,
-        website=normalize_website(payload.get("website")),
+        website=None,  # always the coin's Bluebuild pitch deck, set when the launch is prepared
         twitter=normalize_twitter(payload.get("twitter")),
         telegram=normalize_telegram(payload.get("telegram")),
         mint=mint,
@@ -585,10 +585,19 @@ async def prepare_launch(project_id: str, request: Request, user: UserContext = 
         )
 
     launch_id = str(uuid.uuid4())
-    created_on = (request.headers.get("origin") or _env("BLUEBUILD_PUBLIC_SITE_URL") or "").rstrip("/") or None
-    if not details.website and created_on:
-        # The coin's website is its Bluebuild product page unless the creator gave their own.
-        details.website = f"{created_on}/coin/{details.mint}"
+    created_on = (_env("BLUEBUILD_PUBLIC_SITE_URL") or request.headers.get("origin") or "").rstrip("/")
+    if not created_on:
+        raise _bad_request("Couldn't work out this site's address for the pitch deck. Please reload and try again.")
+    # Every coin's website is its own pitch deck; creators can't change or remove it.
+    details.website = f"{created_on}/coin/{details.mint}"
+    try:
+        pitch = await run_in_threadpool(_build_pitch_deck, project_id, user, launch_id, details.name)
+    except Exception as exc:
+        logger.exception("Pitch deck build failed for project %s", project_id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "pitch_deck_failed", "message": "Couldn't build the pitch deck for this coin. Please try again."},
+        ) from exc
     try:
         image_url = await run_in_threadpool(
             db.put_file, f"{launch_id}.{details.image_ext}", details.image_bytes, details.image_type
@@ -612,6 +621,7 @@ async def prepare_launch(project_id: str, request: Request, user: UserContext = 
             "image_url": image_url,
             "metadata_uri": metadata_uri,
             "initial_buy_sol": details.initial_buy_sol,
+            "pitch": pitch,
             "status": "prepared",
             "created_at": _utc_now(),
         })
@@ -667,32 +677,31 @@ async def confirm_launch(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "launch_exists", "message": "This design already has a coin recorded."},
         ) from exc
-    pitch = await run_in_threadpool(_build_product_page, {**record, **values}, user)
-    if pitch is not None:
-        values["pitch"] = pitch
+    if not record.get("pitch"):
+        # Launches prepared before decks were built up front still get one.
+        try:
+            values["pitch"] = await run_in_threadpool(
+                _build_pitch_deck, record["project_id"], user, record["id"], record["name"]
+            )
+            await run_in_threadpool(db.mark, launch_id, {"pitch": values["pitch"]})
+        except Exception:
+            logger.exception("Pitch deck build failed for launch %s", launch_id)
     return {"status": "launched", "launch": public_launch({**record, **values})}
 
 
-def _build_product_page(record: Dict[str, Any], user: UserContext) -> Optional[Dict[str, Any]]:
-    """Snapshot the design into the coin's product page. A failure never undoes the launch."""
+def _build_pitch_deck(project_id: str, user: UserContext, launch_id: str, coin_name: str) -> Dict[str, Any]:
+    """Snapshot the design into the coin's pitch deck before it launches."""
     from apps.api.bluebuild_pitch import build_pitch
     from apps.api.main import get_project_endpoint
 
-    db = store()
-    try:
-        ir = get_project_endpoint(record["project_id"], user).get("project_ir") or {}
-        pitch = build_pitch(
-            ir,
-            project_id=record["project_id"],
-            coin_name=record["name"],
-            put_file=db.put_file,
-            key_prefix=f"{record['id']}-image",
-        )
-        db.mark(record["id"], {"pitch": pitch})
-        return pitch
-    except Exception:
-        logger.exception("Product page snapshot failed for launch %s", record["id"])
-        return None
+    ir = get_project_endpoint(project_id, user).get("project_ir") or {}
+    return build_pitch(
+        ir,
+        project_id=project_id,
+        coin_name=coin_name,
+        put_file=store().put_file,
+        key_prefix=f"{launch_id}-image",
+    )
 
 
 @router.get("/launchpad/coins/{mint}")

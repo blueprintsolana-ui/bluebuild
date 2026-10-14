@@ -15,7 +15,7 @@ test("the form starts from the design with optional links empty", () => {
 
   assert.equal(form.name.length, 32);
   assert.equal(form.description, "Measures water.");
-  assert.equal(form.website, "");
+  assert.equal("website" in form, false);
   assert.equal(form.twitter, "");
   assert.equal(form.telegram, "");
   assert.equal(form.initialBuySol, "0");

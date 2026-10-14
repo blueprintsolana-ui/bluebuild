@@ -75,7 +75,8 @@ export function DesignCoinCard({ projectId, title, description, images }: Design
       <div className="min-w-0">
         <h2 className="text-sm font-semibold text-[var(--forma-text-strong)]">Launch a coin for this idea</h2>
         <p className="mt-1 text-xs leading-5 text-[var(--forma-text-secondary)]">
-          Create a pump.fun coin for your design from your own wallet, with optional website, X and Telegram links. Bluebuild takes no fee.
+          Create a pump.fun coin for your design from your own wallet. It comes with a pitch deck for its website, plus your X and
+          Telegram links. Bluebuild takes no fee.
         </p>
       </div>
       <button type="button" onClick={() => setOpen(true)} className="connect-wallet-button shrink-0 justify-center">
@@ -130,7 +131,7 @@ function LaunchedCoinCard({ coin }: { coin: LaunchedCoin }) {
             href={coin.product_page_path}
             className="inline-flex h-11 items-center rounded-lg border border-[var(--forma-border)] px-4 text-sm font-medium text-[var(--forma-text-strong)] transition hover:border-[var(--forma-text-muted)]"
           >
-            Product page
+            Pitch deck
           </a>
         )}
         <a href={coin.pump_url} target="_blank" rel="noreferrer" className="connect-wallet-button justify-center">

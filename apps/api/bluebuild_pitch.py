@@ -33,13 +33,28 @@ class PitchUseCase(BaseModel):
     detail: str = Field(..., description="One sentence on how someone uses the product in this situation")
 
 
+class ProductionEstimate(BaseModel):
+    volume: str = Field(..., description="Production run, e.g. '1,000 units' or '10,000 units'")
+    unit_cost_usd: float = Field(..., description="Estimated all-in cost per unit in USD at this volume")
+    notes: str = Field("", description="Main assumptions in one short sentence")
+
+
 class PitchCopy(BaseModel):
     tagline: str = Field(..., description="One punchy line under 90 characters")
     pitch: str = Field(..., description="Two or three plain-English sentences on what it is and why it's useful")
+    problem: str = Field("", description="The everyday problem it solves, in one or two sentences")
+    how_it_works: List[str] = Field(default_factory=list, description="Three to five short steps explaining how it works")
     highlights: List[str] = Field(default_factory=list, description="Three to six short key features")
     use_cases: List[PitchUseCase] = Field(default_factory=list, description="Three to five realistic use cases")
     audience: str = Field("", description="Who it's for, in one sentence")
+    target_market: str = Field("", description="Who would buy it and where it would sell, in one or two sentences")
     materials: List[str] = Field(default_factory=list, description="Main materials and finishes, short phrases")
+    production_estimates: List[ProductionEstimate] = Field(
+        default_factory=list,
+        description="Per-unit cost estimates for 1,000 and 10,000 unit runs",
+    )
+    tooling_cost_usd: Optional[float] = Field(None, description="Estimated one-time tooling cost (moulds, fixtures) in USD")
+    manufacturing_notes: List[str] = Field(default_factory=list, description="Two to four notes on how it would be mass produced")
 
 
 def _dict(value: Any) -> Dict[str, Any]:
@@ -106,6 +121,11 @@ def snapshot_design(ir: Dict[str, Any], project_id: str) -> Dict[str, Any]:
         "specs": [spec for spec in specs if spec["value"]],
         "parts": _parts_summary(components),
         "fabrication": [_text(item, 200) for item in _list(mechanical.get("fabrication_details"))[:6] if _text(item)],
+        "subsystems": [
+            {"name": _text(_dict(node).get("name"), 80), "purpose": _text(_dict(node).get("purpose"), 200)}
+            for node in _list(_dict(_dict(ir.get("system_architecture")).get("root")).get("children"))[:6]
+            if _text(_dict(node).get("name"))
+        ],
         "product_model": metadata.get("product_model") if isinstance(metadata.get("product_model"), dict) else None,
         "mechanical": {
             key: mechanical.get(key)
@@ -163,11 +183,21 @@ def copy_pitch_images(
 
 def write_pitch_copy(snapshot: Dict[str, Any], coin_name: str, generate: Optional[Callable[[str], PitchCopy]] = None) -> Optional[Dict[str, Any]]:
     """Short product-page copy from the snapshot. Returns None when no model is available."""
-    facts = {key: snapshot.get(key) for key in ("title", "description", "category", "features", "specs", "parts", "fabrication")}
+    facts = {
+        key: snapshot.get(key)
+        for key in ("title", "description", "category", "features", "specs", "parts", "fabrication", "subsystems")
+    }
+    facts["prototype_parts_cost_usd"] = snapshot.get("estimated_cost_usd")
     prompt = f"""
-    You are writing the product page for a hardware product idea that now has a community coin named {coin_name!r}.
-    Use only the facts below; do not invent capabilities, certifications, prices, partnerships or launch dates,
-    and never promise financial returns or mention the coin's price. Write plainly for a general audience.
+    You are writing a one-page pitch deck for a hardware product idea that now has a community coin named
+    {coin_name!r}. Use only the facts below; do not invent capabilities, certifications, partnerships, sales or
+    launch dates, and never promise financial returns or mention the coin's price. Write plainly for a general
+    audience.
+
+    For production_estimates, estimate the all-in cost per unit (parts at volume pricing, enclosure manufacturing,
+    assembly and testing) for runs of 1,000 and 10,000 units, starting from the prototype parts cost and parts list.
+    Give a realistic one-time tooling_cost_usd for moulds and fixtures. These are rough engineering estimates, so
+    keep the assumptions short and honest.
 
     Facts:
     {json.dumps(facts, indent=2, ensure_ascii=False)}
@@ -194,7 +224,19 @@ def write_pitch_copy(snapshot: Dict[str, Any], coin_name: str, generate: Optiona
             if _text(item.title)
         ],
         "audience": _text(copy.audience, 240),
+        "problem": _text(copy.problem, 400),
+        "how_it_works": [_text(item, 200) for item in copy.how_it_works[:5] if _text(item)],
+        "target_market": _text(copy.target_market, 400),
         "materials": [_text(item, 100) for item in copy.materials[:6] if _text(item)],
+        "production_estimates": [
+            {"volume": _text(item.volume, 40), "unit_cost_usd": round(float(item.unit_cost_usd), 2), "notes": _text(item.notes, 200)}
+            for item in copy.production_estimates[:3]
+            if item.unit_cost_usd and item.unit_cost_usd > 0
+        ],
+        "tooling_cost_usd": round(float(copy.tooling_cost_usd), 0)
+        if isinstance(copy.tooling_cost_usd, (int, float)) and copy.tooling_cost_usd > 0
+        else None,
+        "manufacturing_notes": [_text(item, 200) for item in copy.manufacturing_notes[:4] if _text(item)],
     }
 
 
