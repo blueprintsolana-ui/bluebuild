@@ -4,7 +4,23 @@ import type { ReactNode } from "react";
  * Maker icons in the lucide line style (24 px grid, round caps). Every stroke has pathLength 1
  * so `.craft-icon` can redraw it on hover of a `.craft-draw-host` parent.
  */
-export type MakerIconName = "gear" | "caliper" | "bolt" | "chip" | "battery" | "screen" | "solder" | "rocket" | "pencil" | "sheet";
+export type MakerIconName =
+  | "gear"
+  | "caliper"
+  | "bolt"
+  | "chip"
+  | "battery"
+  | "screen"
+  | "solder"
+  | "rocket"
+  | "pencil"
+  | "sheet"
+  | "shield"
+  | "search"
+  | "wire"
+  | "cube"
+  | "box"
+  | "camera";
 
 const SHAPES: Record<MakerIconName, ReactNode> = {
   gear: (
@@ -73,6 +89,45 @@ const SHAPES: Record<MakerIconName, ReactNode> = {
       <path pathLength={1} d="M3 21l5-5" />
       <path pathLength={1} d="M8 16l2-2 6 .5L21.5 9 15 2.5 9.5 8l.5 6" />
       <path pathLength={1} d="M14 6l4 4" />
+    </>
+  ),
+  shield: (
+    <>
+      <path pathLength={1} d="M12 2.5l7.5 3v6c0 4.6-3.2 8.3-7.5 10-4.3-1.7-7.5-5.4-7.5-10v-6z" />
+      <path pathLength={1} d="M8.5 12l2.5 2.5 4.5-5" />
+    </>
+  ),
+  search: (
+    <>
+      <circle pathLength={1} cx="10.5" cy="10.5" r="6.5" />
+      <path pathLength={1} d="M15.3 15.3l5.2 5.2" />
+    </>
+  ),
+  wire: (
+    <>
+      <circle pathLength={1} cx="4.5" cy="6" r="2" />
+      <circle pathLength={1} cx="19.5" cy="18" r="2" />
+      <path pathLength={1} d="M6.5 6h5v12h6" />
+      <path pathLength={1} d="M11.5 10h4" />
+    </>
+  ),
+  cube: (
+    <>
+      <path pathLength={1} d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5z" />
+      <path pathLength={1} d="M3.5 7.25L12 12l8.5-4.75M12 12v9.5" />
+    </>
+  ),
+  box: (
+    <>
+      <path pathLength={1} d="M3.5 8h17v12.5h-17z" />
+      <path pathLength={1} d="M2.5 4h19v4h-19z" />
+      <path pathLength={1} d="M10 12h4" />
+    </>
+  ),
+  camera: (
+    <>
+      <path pathLength={1} d="M3 7.5h4l1.8-2.5h6.4L17 7.5h4v12H3z" />
+      <circle pathLength={1} cx="12" cy="13.2" r="3.6" />
     </>
   ),
 };

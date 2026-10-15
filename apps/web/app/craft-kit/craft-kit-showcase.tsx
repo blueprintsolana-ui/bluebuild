@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   CrosshairReadout,
@@ -8,11 +8,14 @@ import {
   GearTrain,
   LivingGrid,
   MakerIcon,
+  MechanicalCounter,
   PaperCard,
   PaperGrain,
+  PipelineMachine,
   Stamp,
   TornEdge,
   type GearTrainHandle,
+  type MachineStep,
   type MakerIconName,
 } from "../../components/craft";
 
@@ -23,7 +26,43 @@ const HERO_TRAIN = [
   { teeth: 10, angle: 35 },
 ];
 const PIPELINE_TRAIN = [{ teeth: 12 }, { teeth: 8, angle: 0, color: "var(--craft-amber)" }, { teeth: 12, angle: 0 }];
-const ICONS: MakerIconName[] = ["gear", "caliper", "bolt", "chip", "battery", "screen", "solder"];
+const ICONS: MakerIconName[] = ["gear", "caliper", "bolt", "chip", "battery", "screen", "solder", "shield", "search", "wire", "cube", "box", "camera"];
+const DEMO_STEPS: Omit<MachineStep, "status">[] = [
+  { id: "safety_guardrail", label: "Checking safe build scope" },
+  { id: "intent_parser", label: "Parsing the hardware idea" },
+  { id: "component_selection", label: "Selecting compatible parts" },
+  { id: "wiring_netlist", label: "Drafting nets and pin mappings" },
+  { id: "validation_repair", label: "Validating and repairing wiring" },
+  { id: "bom", label: "Calculating BOM and cost" },
+  { id: "assembly", label: "Writing build steps" },
+  { id: "image_generation", label: "Generating product visuals" },
+];
+
+function demoSteps(done: number, failed = false): MachineStep[] {
+  return DEMO_STEPS.map((step, index) => ({
+    ...step,
+    status: index < done ? "completed" : index === done ? (failed ? "failed" : "active") : "pending",
+  }));
+}
+
+/** Runs the machine through a fake job so its ticks, stamps and jam can be checked. */
+function MachineDemo() {
+  const [done, setDone] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setDone((value) => (value >= DEMO_STEPS.length ? 0 : value + 1)), 2200);
+    return () => window.clearInterval(timer);
+  }, []);
+  return (
+    <div className="space-y-6">
+      <PipelineMachine state={done >= DEMO_STEPS.length ? "done" : "running"} steps={demoSteps(done)} />
+      <PipelineMachine state="failed" canRetry steps={demoSteps(3, true)} />
+      <p className="flex items-baseline gap-2 text-[22px]">
+        <MechanicalCounter value={20 - done * 2} />
+        <span className="text-[12px] text-[var(--craft-muted)]">designs left (counts down with the demo)</span>
+      </p>
+    </div>
+  );
+}
 const label = "font-[family-name:var(--craft-mono)] text-[11px] uppercase tracking-[0.16em] text-[var(--craft-muted)]";
 
 export default function CraftKitShowcase() {
@@ -115,6 +154,13 @@ export default function CraftKitShowcase() {
                 </span>
               ))}
             </div>
+          </PaperCard>
+        </section>
+
+        <section>
+          <p className={label}>Generation machine · running and jammed</p>
+          <PaperCard tone="deep" className="mt-4 p-5">
+            <MachineDemo />
           </PaperCard>
         </section>
 
