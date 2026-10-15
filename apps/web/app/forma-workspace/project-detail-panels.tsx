@@ -21,6 +21,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { Stamp } from "../../components/craft";
 import { DesignCoinCard } from "../../components/design-coin-card";
 import ImageLightbox from "../../components/image-lightbox";
 import { isHardwareReferenceCandidate, type ProjectImageCandidate } from "../../lib/project-images";
@@ -761,6 +762,11 @@ export function MechanicalPanel({
   );
 }
 
+function isCriticalIssue(issue: any) {
+  const key = String(issue?.severity || "").toLowerCase();
+  return key === "critical" || key === "error";
+}
+
 function issueSeverityTone(severity: unknown) {
   const key = String(severity || "").toLowerCase();
   if (key === "critical" || key === "error") {
@@ -838,7 +844,17 @@ export function AssemblyPanel({
             <div className="mb-4 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-[rgb(var(--forma-cyan-rgb))]" />
               <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">Safety Audit</h3>
+              {issues.some(isCriticalIssue) ? (
+                <Stamp tone="red" rotate={-5} className="ml-auto">Revise</Stamp>
+              ) : (
+                <Stamp tone="amber" rotate={-6} className="ml-auto">Approved</Stamp>
+              )}
             </div>
+            <p className="-mt-2 mb-4 text-[11px] leading-5 text-[var(--forma-text-muted)]">
+              {issues.some(isCriticalIssue)
+                ? "The automatic checks found problems to fix before building."
+                : "The automatic checks found nothing critical. Have a person review it before you build."}
+            </p>
             {issues.length ? (
               <div className="space-y-3">
                 {issues.map((issue, index) => {
@@ -846,6 +862,11 @@ export function AssemblyPanel({
                   return (
                     <div key={`${issue.description}-${index}`} className={`rounded-lg border p-3 ${tone.well}`}>
                       <div className="flex flex-wrap items-center gap-2">
+                        {isCriticalIssue(issue) && (
+                          <Stamp tone="red" rotate={-4} className="px-1.5 py-0 text-[10px]">
+                            Revise
+                          </Stamp>
+                        )}
                         <span className={`rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] ${tone.chip}`}>
                           {issue.severity}
                         </span>

@@ -159,7 +159,7 @@
 
 /* ---------- rubber stamp ---------- */
 
-.craft-stamp {
+:where(.craft-stamp) {
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
@@ -353,5 +353,419 @@
   .craft-draw-host:hover .craft-icon *,
   .craft-icon.is-drawing * {
     animation: none;
+  }
+}
+
+/* ---------- App (/app) ---------------------------------------------------- */
+
+/*
+ * On the blue theme the drafting grid shows through the page-coloured layers marked
+ * .craft-see-through (open space only; text panels stay solid). Other themes keep their look.
+ */
+html[data-theme="solarized-dark"] .craft-app.craft-app,
+html[data-theme="solarized-dark"] .craft-app .craft-see-through {
+  background: transparent !important;
+}
+
+html:not([data-theme="solarized-dark"]) .craft-app > .craft-living-grid,
+html:not([data-theme="solarized-dark"]) .craft-app > .craft-grain {
+  display: none;
+}
+
+/* Chat messages: the user's are kraft-paper notes, Bluebuild's are blueprint sheets. */
+.craft-msg {
+  animation: craft-snap-in 360ms var(--craft-ease) both;
+}
+
+@keyframes craft-snap-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Kraft notes read the same on every theme: dark ink on brown paper. */
+html[data-theme] .craft-app .craft-msg--user {
+  border-color: rgb(59 47 28 / 0.22);
+  border-radius: 3px 3px 3px 12px;
+  background-color: var(--craft-kraft);
+  background-image: var(--craft-grain);
+  background-size: 160px 160px;
+  background-blend-mode: soft-light;
+  color: var(--craft-kraft-ink);
+  box-shadow: inset 0 0 22px rgb(120 92 48 / 0.18), 0 10px 22px -16px rgb(0 0 0 / 0.7);
+}
+
+html[data-theme] .craft-app .craft-msg--user .craft-msg__meta,
+html[data-theme] .craft-app .craft-msg--user .craft-msg__meta * {
+  color: rgb(59 47 28 / 0.68);
+}
+
+html[data-theme] .craft-app .craft-msg--user .craft-msg__meta svg:first-child {
+  color: var(--craft-amber-deep);
+}
+
+html[data-theme="solarized-dark"] .craft-app :is(.craft-msg--assistant, .craft-msg--error, .craft-msg--cancelled) {
+  border-color: var(--craft-hairline);
+  border-radius: 3px 12px 12px 3px;
+  background-color: var(--craft-raised);
+  color: var(--craft-ink);
+  box-shadow: inset 0 0 0 1px rgb(244 247 251 / 0.04), inset 0 0 26px rgb(5 18 44 / 0.35), 0 14px 30px -20px rgb(0 0 0 / 0.65);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-msg--error {
+  border-color: rgb(255 107 94 / 0.55);
+  box-shadow: inset 3px 0 0 var(--craft-red), inset 0 0 26px rgb(5 18 44 / 0.35), 0 14px 30px -20px rgb(0 0 0 / 0.65);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-msg--cancelled {
+  box-shadow: inset 3px 0 0 var(--craft-amber), inset 0 0 26px rgb(5 18 44 / 0.35), 0 14px 30px -20px rgb(0 0 0 / 0.65);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-msg--system {
+  border-color: rgb(58 112 196 / 0.5);
+  border-style: dashed;
+  background-color: var(--craft-panel);
+  color: var(--craft-muted);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-msg .craft-msg__meta {
+  font-family: var(--craft-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .craft-msg {
+    animation: none;
+  }
+}
+
+/* Sidebar chat list: each chat is a small paper tab; the open one sticks out. */
+html[data-theme="solarized-dark"] .craft-app .craft-tab {
+  border: 1px solid transparent;
+  border-radius: 2px 8px 8px 2px;
+  transition: transform 160ms var(--craft-ease), background-color 160ms ease, border-color 160ms ease;
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-tab:hover {
+  transform: translateX(2px);
+  border-color: rgb(58 112 196 / 0.45);
+  background-color: rgb(28 74 145 / 0.55);
+  color: var(--craft-ink);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-tab.is-active {
+  transform: translateX(4px);
+  border-color: var(--craft-hairline);
+  background-color: var(--craft-raised);
+  color: var(--craft-ink);
+  box-shadow: inset 3px 0 0 var(--craft-amber), 0 8px 16px -12px rgb(0 0 0 / 0.7);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-tab.is-active [class*="text-emerald"] {
+  color: var(--craft-ink);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-tab.is-active svg {
+  color: var(--craft-amber);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="solarized-dark"] .craft-app .craft-tab {
+    transition: none;
+  }
+}
+
+/* Generation progress: the pipeline as a little machine. */
+.craft-machine {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.craft-machine__gears {
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+  color: var(--craft-ink);
+}
+
+.craft-machine__belt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.craft-machine__chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid rgb(58 112 196 / 0.55);
+  border-radius: 3px;
+  background-color: var(--craft-panel);
+  color: var(--craft-muted);
+  font-family: var(--craft-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* A short drive belt links each chip to the one before it. */
+.craft-machine__chip + .craft-machine__chip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 0.9rem;
+  border-top: 1px dashed rgb(58 112 196 / 0.7);
+}
+
+.craft-machine__chip.is-active {
+  border-color: var(--craft-amber);
+  color: var(--craft-ink);
+  box-shadow: 0 0 0 1px rgb(255 181 71 / 0.25);
+}
+
+.craft-machine__chip.is-completed {
+  border-color: var(--craft-hairline);
+  background-color: var(--craft-raised);
+  color: var(--craft-ink);
+  padding-right: 1.35rem;
+}
+
+.craft-machine__chip.is-failed {
+  border-color: var(--craft-red);
+  color: var(--craft-ink);
+  padding-right: 1.35rem;
+}
+
+.craft-machine__chip.is-skipped {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.craft-machine__chip .craft-icon {
+  flex-shrink: 0;
+}
+
+.craft-machine__stamp {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.35rem;
+  padding: 0 0.2rem;
+  border-width: 1.5px;
+  border-radius: 3px;
+  background-color: var(--craft-panel);
+  font-size: 10px;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.craft-machine__jammed {
+  animation: craft-jam 420ms var(--craft-ease) both;
+}
+
+@keyframes craft-jam {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(7deg);
+  }
+  55% {
+    transform: rotate(-4deg);
+  }
+  80% {
+    transform: rotate(2deg);
+  }
+}
+
+.craft-machine__jam-note {
+  margin: 0.65rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-left: 3px solid var(--craft-red);
+  border-radius: 2px;
+  background-color: rgb(255 107 94 / 0.1);
+  color: var(--craft-ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .craft-machine__jammed {
+    animation: none;
+  }
+}
+
+/* Project viewer: tabs look like folder tabs on a drawing set. */
+html[data-theme="solarized-dark"] .craft-app .craft-folder-tabs {
+  align-items: flex-end;
+  gap: 2px;
+  padding-top: 8px;
+  border-bottom-color: var(--craft-hairline);
+  background-color: var(--craft-panel);
+  /* Still scrolls sideways on narrow screens, without a scrollbar cutting under the tabs. */
+  scrollbar-width: none;
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-folder-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-folder-tab {
+  position: relative;
+  height: 34px;
+  margin-bottom: -1px;
+  padding: 0 0.5rem;
+  border: 1px solid rgb(58 112 196 / 0.45);
+  border-bottom-color: var(--craft-hairline);
+  border-radius: 7px 11px 0 0;
+  background-color: rgb(20 54 110 / 0.75);
+  color: var(--craft-muted);
+  font-family: var(--craft-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  transform: translateY(3px);
+  transition: transform 160ms var(--craft-ease), color 160ms ease, background-color 160ms ease;
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-folder-tab:hover {
+  transform: translateY(1px);
+  background-color: rgb(28 74 145 / 0.8);
+  color: var(--craft-ink);
+}
+
+/* The open tab joins the sheet underneath it. */
+html[data-theme="solarized-dark"] .craft-app .craft-folder-tab.is-active {
+  z-index: 1;
+  border-color: var(--craft-hairline);
+  border-bottom-color: var(--forma-page);
+  background-color: var(--forma-page);
+  color: var(--craft-ink);
+  transform: none;
+  box-shadow: inset 0 2px 0 var(--craft-amber);
+}
+
+html[data-theme="solarized-dark"] .craft-app .craft-folder-tab.is-active svg {
+  color: var(--craft-amber);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="solarized-dark"] .craft-app .craft-folder-tab {
+    transition: none;
+  }
+}
+
+/* Mechanical counter: each digit is a drum of 0-9 that rolls to its value. */
+.craft-counter {
+  display: inline-flex;
+  font-family: var(--craft-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.craft-counter__wheel {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+}
+
+.craft-counter__drum {
+  display: flex;
+  flex-direction: column;
+  transition: transform 520ms var(--craft-spring);
+}
+
+.craft-counter__drum > span {
+  height: 1em;
+}
+
+/* Design allowance ticket: a stub, a perforation with notches, and the body. */
+.craft-ticket {
+  --stub: 4.4rem;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid var(--craft-hairline);
+  border-radius: 4px;
+  background-color: var(--craft-panel);
+  background-image: linear-gradient(90deg, rgb(28 74 145 / 0.9) var(--stub), transparent var(--stub));
+  color: var(--craft-ink);
+  font-family: var(--craft-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-align: left;
+  /* Two half-circle notches where the stub tears off. */
+  -webkit-mask-image: radial-gradient(circle at var(--stub) 0, transparent 6px, #000 6.5px), radial-gradient(circle at var(--stub) 100%, transparent 6px, #000 6.5px);
+  -webkit-mask-composite: source-in;
+  mask-image: radial-gradient(circle at var(--stub) 0, transparent 6px, #000 6.5px), radial-gradient(circle at var(--stub) 100%, transparent 6px, #000 6.5px);
+  mask-composite: intersect;
+}
+
+.craft-ticket--floating {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  width: auto;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+}
+
+.craft-ticket--action {
+  cursor: pointer;
+  transition: border-color 160ms ease;
+}
+
+.craft-ticket--action:hover {
+  border-color: var(--craft-amber);
+}
+
+.craft-ticket__stub {
+  display: flex;
+  flex: 0 0 var(--stub);
+  align-items: center;
+  justify-content: center;
+  border-right: 1.5px dashed rgb(169 190 221 / 0.55);
+  color: var(--craft-muted);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.craft-ticket__tier {
+  padding: 0.15em 0.4em;
+  border-width: 1.5px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.craft-ticket__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 13px;
+}
+
+.craft-ticket__fine {
+  color: var(--craft-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .craft-counter__drum {
+    transition: none;
   }
 }

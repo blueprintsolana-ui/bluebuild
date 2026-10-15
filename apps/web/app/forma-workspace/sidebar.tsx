@@ -33,6 +33,7 @@ import {
   type WorkspaceStatusPresentation,
   type WorkspaceStatusTone,
 } from "../../lib/connection-status";
+import { SidebarQuotaTicket } from "../../components/bluebuild-quota-badge";
 
 export type ChatListItem = {
   chatId: string;
@@ -371,7 +372,7 @@ function ChatSidebarRow({
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const showActions = Boolean(!compact && !readOnly && !renaming && (onPin || onDelete));
-  const rowClassName = `group relative flex w-full min-w-0 items-center gap-1 rounded-lg text-left text-xs font-medium transition-colors ${
+  const rowClassName = `craft-tab ${active ? "is-active" : ""} group relative flex w-full min-w-0 items-center gap-1 rounded-lg text-left text-xs font-medium transition-colors ${
     active
       ? "bg-emerald-500/10 text-emerald-400"
       : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
@@ -692,7 +693,7 @@ export function ChatSidebar({
             className={`flex h-9 w-full items-center justify-center gap-2 rounded-lg text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
               newChatDisabled
                 ? "cursor-not-allowed bg-zinc-800/40 text-zinc-600"
-                : "forma-action-fill shadow-sm"
+                : "craft-key craft-key--primary min-h-9"
             } ${compact ? "px-0" : "px-3"}`}
             aria-label="New chat"
             title={newChatDisabled ? newChatDisabledReason || "Send a message before starting another chat" : "New chat"}
@@ -792,6 +793,7 @@ export function ChatSidebar({
           <SidebarNavLink href="/install/opencode" icon={Terminal} label="OpenCode setup" compact={compact} onNavigate={onNavigate} />
           <SidebarNavLink href="/about" icon={Handshake} label="About" compact={compact} onNavigate={onNavigate} />
         </div>
+        {!compact && <SidebarQuotaTicket />}
         {authRequired && <SidebarAccountDock compact={compact} />}
       </div>
     </aside>

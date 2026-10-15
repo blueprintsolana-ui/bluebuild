@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LivingGrid, PaperGrain } from "../../components/craft";
 import { WorkspaceStatusCorner } from "./sidebar";
 import type { WorkspaceStatusPresentation } from "../../lib/connection-status";
 
@@ -24,14 +25,17 @@ export default function WorkspaceFrame({
     <div
       className={
         homeMobileTopPadding
-          ? "relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-sans text-zinc-100"
-          : "relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-sans text-zinc-200"
+          ? "craft-app relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-sans text-zinc-100"
+          : "craft-app relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-sans text-zinc-200"
       }
     >
+      {/* The drafting grid shows through the open space around the chat (blue theme only). */}
+      <LivingGrid />
+      <PaperGrain />
       {mobileSidebar}
       <WorkspaceStatusCorner status={workspaceStatus} />
       <div
-        className={`grid h-full min-h-0 min-w-0 overflow-hidden ${
+        className={`relative z-[2] grid h-full min-h-0 min-w-0 overflow-hidden ${
           collapsed ? "md:grid-cols-[72px_minmax(0,1fr)]" : "md:grid-cols-[260px_minmax(0,1fr)]"
         }`}
       >

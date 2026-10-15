@@ -51,6 +51,7 @@ import {
   shouldOfferFailedBuildRetry,
 } from "../lib/conversation-build-state";
 import CopyButton from "../components/copy-button";
+import { PipelineMachine, type MachineStepStatus } from "../components/craft";
 import {
   useAdminSession,
   useBackendLogs,
@@ -1042,20 +1043,6 @@ function formatPipelineDetails(details: Record<string, any> | undefined) {
       return `${key.replace(/_/g, " ")}: ${text.length > 80 ? `${text.slice(0, 77)}...` : text}`;
     })
     .join(" / ");
-}
-
-function PipelineStepDot({ status }: { status: string }) {
-  const tone =
-    status === "completed"
-      ? "border-emerald-400 bg-emerald-400"
-      : status === "failed"
-        ? "border-rose-400 bg-rose-400"
-        : status === "skipped"
-          ? "border-slate-600 bg-slate-800"
-          : status === "active"
-            ? "border-cyan-300 bg-cyan-300"
-            : "border-slate-700 bg-black";
-  return <span className={`h-2.5 w-2.5 shrink-0 border ${tone}`} />;
 }
 
 function chatThreadStorageKey(chatId: string, scope = "local") {
@@ -8121,7 +8108,7 @@ function ChatWorkspace({
                 />
       ) : null}
     >
-    <div className="relative flex h-full min-h-0 min-w-0 flex-col bg-[var(--forma-page)]">
+    <div className="craft-see-through relative flex h-full min-h-0 min-w-0 flex-col bg-[var(--forma-page)]">
       <header className={`workspace-chrome-header absolute inset-x-0 top-0 z-20 flex min-h-14 min-w-0 items-center gap-3 px-3 pb-5 pt-2 sm:px-4 ${headerAway ? "is-away" : ""}`}>
         <MobileSidebarButton onClick={onOpenSidebar} />
         <div className="min-w-0 flex-1">
@@ -8326,7 +8313,7 @@ function ProjectWorkspacePanel({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <nav
-        className="flex min-h-[44px] min-w-0 shrink-0 items-center gap-1 overflow-x-auto border-b border-[var(--forma-border)] bg-[var(--forma-surface)] px-2"
+        className="craft-folder-tabs flex min-h-[44px] min-w-0 shrink-0 items-center gap-1 overflow-x-auto border-b border-[var(--forma-border)] bg-[var(--forma-surface)] px-2"
         aria-label="Project workspace"
       >
         {namespaceTabs.map((tab) => {
@@ -8337,7 +8324,7 @@ function ProjectWorkspacePanel({
               key={tab.id}
               type="button"
               onClick={() => onNamespaceChange(tab.id)}
-              className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-medium transition-colors ${
+              className={`craft-folder-tab ${active ? "is-active" : ""} inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-medium transition-colors ${
                 active
                   ? "bg-[rgb(var(--forma-green-rgb)/0.12)] text-[rgb(var(--forma-green-rgb))]"
                   : "text-[var(--forma-text-muted)] hover:bg-[var(--forma-surface-muted)] hover:text-[var(--forma-text-strong)]"
@@ -8430,7 +8417,6 @@ function AgentPipelineProgressView({
   const waitingForFirstEvent = isLoading && !events.length && startedMs !== null && nowMs - startedMs >= PIPELINE_STALE_AFTER_MS;
   const backendQuiet = isLoading && quietMs !== null && quietMs >= PIPELINE_STALE_AFTER_MS;
   const completedCount = completedPipelineStepCount({ ...progress, steps });
-  const progressPercent = Math.min(100, Math.max(6, Math.round((completedCount / Math.max(steps.length, 1)) * 100)));
   const visibleEvents = events.slice(compact ? -4 : -6);
   const signalLabel = isError
     ? "failed"
@@ -8505,13 +8491,6 @@ function AgentPipelineProgressView({
         </div>
       </div>
 
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#111216]">
-        <div
-          className={`h-full rounded-full ${isError ? "bg-rose-300" : isCancelled ? "bg-amber-300" : "bg-emerald-400"} ${isLoading ? "animate-pulse" : ""}`}
-          style={{ width: `${progressPercent}%` }}
-        />
-      </div>
-
       <div className="mt-3 flex min-w-0 items-start gap-2 rounded-lg border border-white/5 bg-[#111216] p-3">
         {isError ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" /> : isCancelled ? <Square className="mt-0.5 h-4 w-4 shrink-0 fill-current text-amber-300" /> : isLoading ? <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-emerald-400" /> : <Cpu className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />}
         <div className="min-w-0">
@@ -8541,18 +8520,16 @@ function AgentPipelineProgressView({
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {steps.map((step) => (
-          <span
-            key={step.id}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/5 bg-[#111216] px-2 py-1 text-[10px] text-zinc-500"
-            title={`${step.agent}: ${step.label}`}
-          >
-            <PipelineStepDot status={pipelineStepStatus({ ...progress, steps }, step, activeStepId, isLoading)} />
-            <span className="max-w-[120px] truncate">{step.label}</span>
-          </span>
-        ))}
-      </div>
+      <PipelineMachine
+        state={isError ? "failed" : isCancelled ? "stopped" : isLoading ? "running" : "done"}
+        canRetry={Boolean(onReset)}
+        steps={steps.map((step) => ({
+          id: step.id,
+          label: step.label,
+          agent: step.agent,
+          status: pipelineStepStatus({ ...progress, steps }, step, activeStepId, isLoading) as MachineStepStatus,
+        }))}
+      />
 
       {!isLoading && (
         <AgentPipelineEventsDisclosure eventCount={events.length}>

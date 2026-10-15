@@ -144,7 +144,7 @@ function ChatProjectLayoutSession({ conversationKey, projectId = null, project, 
 
   return (
     <ProjectWorkspace.Provider value={context}>
-      <div ref={frameRef} className={styles.frame} data-testid="chat-project-layout" data-layout={split ? "split" : visible ? "project" : "chat"}>
+      <div ref={frameRef} className={`${styles.frame} craft-see-through`} data-testid="chat-project-layout" data-layout={split ? "split" : visible ? "project" : "chat"}>
         {hasProject && (
           <div className={styles.toolbar} role="group" aria-label="Workspace view" hidden={fullScreen}>
             <button type="button" className={styles.button} onClick={closeProject} aria-pressed={!visible} aria-controls={chatDomId}>

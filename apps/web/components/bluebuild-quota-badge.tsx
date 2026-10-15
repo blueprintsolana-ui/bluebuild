@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { webConfig } from "../lib/config";
 import { useFormaAuth } from "../lib/forma-auth";
+import { MechanicalCounter } from "./craft/mechanical-counter";
+import { Stamp } from "./craft/stamp";
 
 type QuotaStatus = {
   gating: boolean;
@@ -40,19 +42,22 @@ function formatTokens(value?: number): string {
   return String(Math.floor(value));
 }
 
-function tierLabel(status: QuotaStatus): string {
-  if (status.tier === "free") return "Free taster";
-  const level = status.tier?.replace("tier-", "") || "";
-  return `Holder tier ${level}`;
+function tierStub(status: QuotaStatus): string {
+  if (status.owner) return "Owner";
+  if (status.tier === "free") return "Free";
+  return `Tier ${status.tier?.replace("tier-", "") || ""}`.trim();
 }
 
-/** Small fixed badge: "Holder tier 2 · 14 of 20 designs left today". */
-export function BluebuildQuotaBadge() {
-  const { isSignedIn, getToken, openSignIn } = useFormaAuth();
+/** Workspace screens show the ticket in the sidebar, so the floating one would cover the composer. */
+const WORKSPACE_PREFIXES = ["/app", "/chat/", "/project/", "/projects", "/my-projects", "/jobs", "/settings", "/about"];
+
+function isWorkspaceRoute(pathname: string) {
+  return WORKSPACE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix.endsWith("/") ? prefix : `${prefix}/`));
+}
+
+function useQuotaStatus() {
+  const { isSignedIn, getToken } = useFormaAuth();
   const [status, setStatus] = useState<QuotaStatus | null>(null);
-  // The landing page and coin pitch decks are for visitors, not design allowances.
-  const pathname = usePathname() || "";
-  const onProductPage = pathname === "/" || pathname.startsWith("/coin/") || pathname.startsWith("/craft-kit");
 
   const refresh = useCallback(async () => {
     try {
@@ -63,7 +68,7 @@ export function BluebuildQuotaBadge() {
       });
       if (res.ok) setStatus(await res.json());
     } catch {
-      // The badge is informational; stay quiet if the API is unreachable.
+      // The ticket is informational; stay quiet if the API is unreachable.
     }
   }, [getToken, isSignedIn]);
 
@@ -80,80 +85,118 @@ export function BluebuildQuotaBadge() {
     };
   }, [refresh]);
 
-  if (!status?.gating || onProductPage) return null;
+  return status;
+}
 
-  const shell: React.CSSProperties = {
-    position: "fixed",
-    right: 16,
-    bottom: 16,
-    zIndex: 60,
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "10px 14px",
-    background: "#0E2A57",
-    color: "#F4F7FB",
-    border: "1px solid #3A70C4",
-    borderRadius: 4,
-    fontFamily: "'IBM Plex Mono', Consolas, monospace",
-    fontSize: 12,
-    letterSpacing: "0.06em",
-    boxShadow: "0 10px 30px -12px rgba(0,0,0,0.6)",
-    maxWidth: "calc(100vw - 32px)",
-  };
+/**
+ * The design allowance as a ticket stub: tier on the stub (re-stamped when it changes) and the
+ * designs left on a mechanical counter. "Holder tier 2 · 14 of 20 designs left today".
+ */
+function QuotaTicket({ status, floating }: { status: QuotaStatus; floating: boolean }) {
+  const { openSignIn } = useFormaAuth();
+  const className = `craft-ticket ${floating ? "craft-ticket--floating" : ""}`;
 
   if (!status.signed_in) {
     return (
       <button
         type="button"
         onClick={() => openSignIn({ redirectUrl: typeof window !== "undefined" ? window.location.href : "/" })}
-        style={{ ...shell, cursor: "pointer", textAlign: "left" }}
+        className={`${className} craft-ticket--action`}
       >
-        <span>
-          Connect a Solana wallet for <span style={{ color: "#FFB547" }}>{status.free_per_day ?? 5} free designs</span> a day
+        <span className="craft-ticket__stub">Admit</span>
+        <span className="craft-ticket__body">
+          <span>Connect a Solana wallet</span>
+          <span className="craft-ticket__fine">
+            for <span className="text-[var(--craft-amber)]">{status.free_per_day ?? 5} free designs</span> a day
+          </span>
         </span>
       </button>
     );
   }
 
-  if (status.owner) {
+  if (status.error) {
     return (
-      <div style={shell} role="status">
-        <span style={{ color: "#FFB547" }}>Owner account</span>
-        <span aria-hidden="true" style={{ opacity: 0.4 }}>|</span>
-        <span>no daily limit · other people see their tier here</span>
+      <div className={className} role="status">
+        <span className="craft-ticket__stub">—</span>
+        <span className="craft-ticket__body craft-ticket__fine">Design allowance unavailable right now</span>
       </div>
     );
   }
 
-  if (status.error) {
-    return <div style={shell}>Design allowance unavailable right now</div>;
+  const stub = (
+    <span className="craft-ticket__stub">
+      <Stamp tone={status.tier === "free" && !status.owner ? "ink" : "amber"} rotate={-8} stampKey={tierStub(status)} className="craft-ticket__tier">
+        {tierStub(status)}
+      </Stamp>
+    </span>
+  );
+
+  if (status.owner) {
+    return (
+      <div className={className} role="status">
+        {stub}
+        <span className="craft-ticket__body">
+          <span>No daily limit</span>
+          <span className="craft-ticket__fine">Other people see their tier here</span>
+        </span>
+      </div>
+    );
   }
 
   const remaining = status.remaining ?? 0;
   const limit = status.limit ?? 0;
-  const empty = remaining <= 0;
+  const usedUp =
+    status.free_pool_empty && status.tier === "free"
+      ? "Free designs used up today"
+      : status.connection_limited
+        ? "Free designs for this connection used up today"
+        : null;
 
   return (
-    <div style={shell} role="status" aria-live="polite">
-      <span style={{ color: status.tier === "free" ? "#A9BEDD" : "#FFB547" }}>{tierLabel(status)}</span>
-      <span aria-hidden="true" style={{ opacity: 0.4 }}>|</span>
-      <span style={{ color: empty ? "#FFB547" : "#F4F7FB" }}>
-        {status.free_pool_empty && status.tier === "free"
-          ? "Free designs used up today"
-          : status.connection_limited
-            ? "Free designs for this connection used up today"
-            : `${remaining} of ${limit} designs left today`}
-      </span>
-      {status.wallet ? (
-        <>
-          <span aria-hidden="true" style={{ opacity: 0.4 }}>|</span>
-          <span style={{ color: "#A9BEDD" }}>
+    <div className={className} role="status" aria-live="polite">
+      {stub}
+      <span className="craft-ticket__body">
+        {usedUp ? (
+          <span className="text-[var(--craft-amber)]">{usedUp}</span>
+        ) : (
+          <span className="flex items-baseline gap-1.5">
+            <MechanicalCounter value={remaining} className={remaining <= 0 ? "text-[var(--craft-amber)]" : ""} />
+            <span className="craft-ticket__fine">of {limit} designs left today</span>
+          </span>
+        )}
+        {status.wallet ? (
+          <span className="craft-ticket__fine">
             {shortWallet(status.wallet)}
             {status.token_live ? ` · ${formatTokens(status.holding)} $BLUEBUILD` : ""}
           </span>
-        </>
-      ) : null}
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+function FloatingQuotaTicket() {
+  const status = useQuotaStatus();
+  if (!status?.gating) return null;
+  return <QuotaTicket status={status} floating />;
+}
+
+/** Floating ticket for pages outside the workspace (bottom right). */
+export function BluebuildQuotaBadge() {
+  const pathname = usePathname() || "";
+  // The landing page and coin pitch decks are for visitors, not design allowances.
+  const visitorPage = pathname === "/" || pathname.startsWith("/coin/") || pathname.startsWith("/craft-kit");
+  if (visitorPage || isWorkspaceRoute(pathname)) return null;
+  return <FloatingQuotaTicket />;
+}
+
+/** The same ticket, tucked into the bottom of the workspace sidebar. */
+export function SidebarQuotaTicket() {
+  const status = useQuotaStatus();
+  if (!status?.gating) return null;
+  return (
+    <div className="mt-3">
+      <QuotaTicket status={status} floating={false} />
     </div>
   );
 }

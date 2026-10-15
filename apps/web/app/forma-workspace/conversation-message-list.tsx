@@ -173,6 +173,16 @@ export default function ConversationMessageList({
               : isSystem
                 ? "border-white/5 bg-black/25 text-zinc-400"
                 : "border-white/5 bg-[#181b22] text-zinc-100";
+    const craftKind =
+      message.status === "error" || message.status === "interrupted"
+        ? "error"
+        : message.status === "cancelled"
+          ? "cancelled"
+          : isUser
+            ? "user"
+            : isSystem
+              ? "system"
+              : "assistant";
     const showPipeline = Boolean(message.pipelineProgress)
       && (!message.projectId || message.status === "error" || message.status === "cancelled");
 
@@ -181,8 +191,8 @@ export default function ConversationMessageList({
         key={message.id}
         className={`flex min-w-0 ${isUser ? "justify-end" : "justify-start"} ${projectLayout ? "mx-auto w-full max-w-3xl" : ""}`}
       >
-        <div className={`min-w-0 max-w-[92%] overflow-hidden rounded-xl border px-3 py-2.5 sm:max-w-[86%] sm:px-4 sm:py-3 ${statusTone}`}>
-          <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2 text-[10px] font-medium text-zinc-500">
+        <div className={`craft-msg craft-msg--${craftKind} min-w-0 max-w-[92%] overflow-hidden rounded-xl border px-3 py-2.5 sm:max-w-[86%] sm:px-4 sm:py-3 ${statusTone}`}>
+          <div className="craft-msg__meta mb-2 flex min-w-0 flex-wrap items-center gap-2 text-[10px] font-medium text-zinc-500">
             {message.status === "loading" ? (
               <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-400" />
             ) : message.status === "success" ? (
