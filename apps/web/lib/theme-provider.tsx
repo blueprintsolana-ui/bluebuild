@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_AUTO_THEME_CONFIG,
+  LOCKED_THEME,
   normalizeTheme,
   parseAutoThemeConfig,
   resolveAutoTheme,
@@ -40,9 +41,14 @@ export interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** The theme actually shown: the locked theme when there is one. */
+function shownTheme(theme: FormaTheme): FormaTheme {
+  return LOCKED_THEME ?? theme;
+}
+
 function applyThemeToDocument(theme: FormaTheme) {
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = themeColorScheme(theme);
+  document.documentElement.dataset.theme = shownTheme(theme);
+  document.documentElement.style.colorScheme = themeColorScheme(shownTheme(theme));
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -72,7 +78,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         nextTime: transition.nextTime,
         msRemaining: transition.msRemaining,
       });
-      setThemeState(autoResolvedTheme);
+      setThemeState(shownTheme(autoResolvedTheme));
       applyThemeToDocument(autoResolvedTheme);
       try {
         window.localStorage.setItem(THEME_STORAGE_KEY, autoResolvedTheme);
@@ -91,7 +97,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         nextTime: transition.nextTime,
         msRemaining: transition.msRemaining,
       });
-      setThemeState(activeManual);
+      setThemeState(shownTheme(activeManual));
       applyThemeToDocument(activeManual);
       try {
         window.localStorage.setItem(THEME_STORAGE_KEY, activeManual);
@@ -134,7 +140,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       }
-      setThemeState(normalized);
+      setThemeState(shownTheme(normalized));
       applyThemeToDocument(normalized);
       return updated;
     });
@@ -253,7 +259,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (event.key === THEME_STORAGE_KEY) {
         const nextTheme = normalizeTheme(event.newValue);
-        setThemeState(nextTheme);
+        setThemeState(shownTheme(nextTheme));
         applyThemeToDocument(nextTheme);
       }
     }

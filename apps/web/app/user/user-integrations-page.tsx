@@ -32,7 +32,7 @@ import {
 } from "../../lib/provider-model-catalog";
 import { useFormaAuth } from "../../lib/forma-auth";
 import { useTheme } from "../../lib/theme-provider";
-import { arcticLight, solarizedDark, solarizedLight, type FormaTheme } from "../../lib/theme";
+import { arcticLight, LOCKED_THEME, solarizedDark, solarizedLight, type FormaTheme } from "../../lib/theme";
 import { webConfig } from "../../lib/config";
 import { ProviderMarkTile } from "../../components/provider-mark";
 import { imageOutputIsEnabled, parsePreferredLlmProvider, settingsNavBadge, type SettingsNavBadge as SettingsNavBadgeModel } from "../../lib/settings-nav-status";
@@ -2372,9 +2372,11 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
   }
 
   const contentWidth = "mx-auto w-full max-w-7xl";
+  // With the theme locked there is no Appearance panel beside the sign-in card.
+  const signedOutColumns = LOCKED_THEME ? "max-w-xl" : "lg:grid-cols-[minmax(0,1fr)_360px]";
   const signedOutGrid = embedded
-    ? `${contentWidth} grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]`
-    : `${contentWidth} grid gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_360px]`;
+    ? `${contentWidth} grid gap-5 ${signedOutColumns}`
+    : `${contentWidth} grid gap-5 px-4 py-5 ${signedOutColumns}`;
   const signedInGrid = embedded
     ? `${contentWidth} grid gap-5 md:grid-cols-[240px_minmax(0,1fr)]`
     : `${contentWidth} grid gap-5 px-4 py-5 md:grid-cols-[240px_minmax(0,1fr)]`;
@@ -2412,7 +2414,7 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
         </section>
       ) : !hasIdentity ? (
         <section className={signedOutGrid}>
-          <ThemeSettingsPanel />
+          {!LOCKED_THEME && <ThemeSettingsPanel />}
           <div className={`h-fit ${CARD_SURFACE_CLASS} p-6`}>
             <div className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-100">
               <KeyRound className="h-4 w-4 text-emerald-400" />
@@ -2449,13 +2451,15 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
 
           <nav aria-label="Settings" className="space-y-4 p-2">
             <SettingsNavSection title="Account">
-              <SettingsNavRow
-                label="Appearance"
-                title="Choose and save your light or dark theme."
-                icon={Palette}
-                selected={isAppearanceView}
-                onSelect={() => setSelectedNavigationKey("appearance:theme")}
-              />
+              {!LOCKED_THEME && (
+                <SettingsNavRow
+                  label="Appearance"
+                  title="Choose and save your light or dark theme."
+                  icon={Palette}
+                  selected={isAppearanceView}
+                  onSelect={() => setSelectedNavigationKey("appearance:theme")}
+                />
+              )}
               <SettingsNavRow
                 label="Data & Privacy"
                 title="Control use of your outputs for model improvement."
@@ -2545,7 +2549,7 @@ export default function UserIntegrationsPage({ embedded = false }: { embedded?: 
             </div>
           )}
 
-          {isAppearanceView ? (
+          {isAppearanceView && !LOCKED_THEME ? (
             <ThemeSettingsPanel />
           ) : isDataPrivacyView ? (
             <article className={CARD_SURFACE_CLASS}>

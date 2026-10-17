@@ -7,6 +7,12 @@ export const FORMA_THEMES = ["solarized-dark", "light", "arctic"] as const;
 
 export type FormaTheme = (typeof FORMA_THEMES)[number];
 
+/**
+ * Bluebuild shows everyone the blue drafting theme, so the theme picker is hidden and saved
+ * choices are ignored. Set this to null to let people choose a theme again.
+ */
+export const LOCKED_THEME: FormaTheme | null = "solarized-dark";
+
 export interface AutoThemeConfig {
   mode: "manual" | "auto";
   dayTheme: FormaTheme;
@@ -373,7 +379,8 @@ export const themeBootstrapScript = `
         theme = "solarized-dark";
       }
     }
-    document.documentElement.dataset.theme = theme;
+${LOCKED_THEME ? `    theme = "${LOCKED_THEME}";
+` : ""}    document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = (theme === "solarized-dark" || theme === "dark") ? "dark" : "light";
   } catch (error) {
     document.documentElement.dataset.theme = "solarized-dark";
