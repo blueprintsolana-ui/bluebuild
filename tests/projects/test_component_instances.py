@@ -183,6 +183,37 @@ class PhysicalComponentInstanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "Duplicate component reference designator 'M1'"):
             HardwareIntermediateRepresentation(components=[motor_payload(quantity=1), motor_payload(quantity=1)])
 
+    def test_shared_part_with_role_specific_pins_merges_instead_of_failing(self) -> None:
+        # Two copies of one 1 MOhm resistor in a battery divider, as a live generation described
+        # them: each pin carries its circuit role, which is instance data, not part data.
+        def divider_resistor(ref_des: str, top: tuple, bottom: tuple) -> dict:
+            return {
+                "ref_des": ref_des,
+                "part_number": "RC0805FR-071ML",
+                "name": "1 MOhm 0805 resistor",
+                "category": "Passives",
+                "unit_price": 0.01,
+                "rationale": "Battery voltage divider",
+                "pins": [
+                    {"pin_id": "1", "name": "Terminal 1", "pin_type": top[0], "voltage": top[1], "description": top[2]},
+                    {"pin_id": "2", "name": "Terminal 2", "pin_type": bottom[0], "voltage": bottom[1], "description": bottom[2]},
+                ],
+            }
+
+        ir = HardwareIntermediateRepresentation(components=[
+            divider_resistor("R2", ("Passive", 4.2, "To battery positive"), ("Passive", 2.1, "To divider midpoint")),
+            divider_resistor("R3", ("Passive", 2.1, "To divider midpoint"), ("Ground", 0.0, "To ground")),
+        ])
+
+        self.assertEqual(len(ir.part_definitions), 1)
+        pins = {pin.pin_id: pin for pin in ir.part_definitions[0].pins}
+        self.assertEqual(pins["1"].name, "Terminal 1")
+        self.assertIsNone(pins["1"].voltage)
+        self.assertIsNone(pins["2"].description)
+        self.assertEqual(pins["2"].pin_type, "Passive")
+        self.assertEqual(len(ir.bom), 1)
+        self.assertEqual(ir.bom[0].quantity, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

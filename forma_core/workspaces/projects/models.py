@@ -446,6 +446,33 @@ def part_definition_from_instance(component: ComponentInstance) -> PartDefinitio
     )
 
 
+_USAGE_PIN_FIELDS = ("pin_type", "voltage", "description", "direction", "power_role", "interface")
+
+
+def merge_shared_pins(current: List[PinDefinition], candidate: List[PinDefinition]) -> List[PinDefinition]:
+    """Combine two instances' pin lists for one shared part.
+
+    Models describe each copy of a part in its circuit role: the two resistors of a divider get
+    different voltages, descriptions and even a "Ground" pin type. Those are facts about the
+    instance, not the part, so fields that disagree become neutral (None, or "Passive" for the pin
+    type) instead of failing the whole design. Pins only one instance lists are kept.
+    """
+
+    merged: Dict[str, PinDefinition] = {pin.pin_id: pin for pin in current}
+    for pin in candidate:
+        existing = merged.get(pin.pin_id)
+        if existing is None:
+            merged[pin.pin_id] = pin
+            continue
+        updates: Dict[str, Any] = {}
+        for field in _USAGE_PIN_FIELDS:
+            if getattr(existing, field) != getattr(pin, field):
+                updates[field] = "Passive" if field == "pin_type" else None
+        if updates:
+            merged[pin.pin_id] = existing.model_copy(update=updates)
+    return list(merged.values())
+
+
 def derive_part_definitions(
     components: Iterable[ComponentInstance],
     existing: Iterable[PartDefinition] = (),
@@ -466,7 +493,7 @@ def derive_part_definitions(
         if current.part_number != candidate.part_number:
             raise ValueError(f"Part definition '{part_id}' is used for conflicting part numbers.")
         if current.pins and candidate.pins and current.pins != candidate.pins:
-            raise ValueError(f"Part definition '{part_id}' has conflicting shared pin data.")
+            definitions[part_id] = current.model_copy(update={"pins": merge_shared_pins(current.pins, candidate.pins)})
     return list(definitions.values())
 
 
