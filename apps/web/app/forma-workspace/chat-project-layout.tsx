@@ -22,6 +22,8 @@ type ProjectWorkspaceContext = {
   hasProject: boolean;
   fullScreen: boolean;
   openProject: () => void;
+  /** Open the project pane on one of its tabs (workspace tab id, e.g. "bom"). */
+  openTab: (tab: string) => void;
   closeProject: () => void;
   toggleFullScreen: () => void;
 };
@@ -33,6 +35,8 @@ type ChatProjectLayoutProps = {
   project?: ReactNode;
   children: ReactNode;
   history?: ProjectHistoryConfig;
+  /** Switch the project pane's tab; ChatProjectLayout opens the pane itself. */
+  onOpenTab?: (tab: string) => void;
 };
 
 /** One session owns one viewer slot. Changing chats releases the previous subtree. */
@@ -42,7 +46,7 @@ export default function ChatProjectLayout(props: ChatProjectLayoutProps) {
   </ProjectHistoryProvider>;
 }
 
-function ChatProjectLayoutSession({ conversationKey, projectId = null, project, children }: ChatProjectLayoutProps) {
+function ChatProjectLayoutSession({ conversationKey, projectId = null, project, children, onOpenTab }: ChatProjectLayoutProps) {
   const [state, setState] = useState(initialChatProjectLayout);
   const [wide, setWide] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -133,9 +137,14 @@ function ChatProjectLayoutSession({ conversationKey, projectId = null, project, 
     };
   }, [fullScreen]);
 
+  const openTab = useCallback((tab: string) => {
+    onOpenTab?.(tab);
+    openProject();
+  }, [onOpenTab, openProject]);
+
   const context = useMemo<ProjectWorkspaceContext>(() => ({
-    projectId, hasProject, fullScreen, openProject, closeProject, toggleFullScreen,
-  }), [projectId, hasProject, fullScreen, openProject, closeProject, toggleFullScreen]);
+    projectId, hasProject, fullScreen, openProject, openTab, closeProject, toggleFullScreen,
+  }), [projectId, hasProject, fullScreen, openProject, openTab, closeProject, toggleFullScreen]);
   const gridStyle: CSSProperties = {
     gridTemplateColumns: split
       ? `minmax(0, ${state.chatFraction}fr) 10px minmax(0, ${1 - state.chatFraction}fr)`
@@ -271,6 +280,51 @@ function ShareProjectButton({ projectId, title, isPrivate }: { projectId: string
     {copied ? <Check className={styles.icon} /> : <Share2 className={styles.icon} />}
     <span className={styles.buttonLabel}>{copied ? "Copied" : "Share"}</span>
   </button>;
+}
+
+const DONE_LINKS: { tab: string; label: string }[] = [
+  { tab: "bom", label: "Parts list" },
+  { tab: "schematic", label: "Wiring diagram" },
+  { tab: "mechanical", label: "3D model" },
+  { tab: "assembly", label: "Build guide" },
+  { tab: "overview", label: "Pitch & coin" },
+];
+
+/**
+ * Under a finished build: "14 / 14 STEPS LOCKED · 72.4s" with one green square per step, and
+ * quick links to the project tabs. A build that just finished opens the Overview tab 700 ms later.
+ */
+export function BuildDoneSummary({ total, elapsedSeconds, finishedAtMs }: { total: number; elapsedSeconds: number | null; finishedAtMs: number | null }) {
+  const workspace = useContext(ProjectWorkspace);
+  const openTab = workspace?.openTab;
+  const canOpen = Boolean(workspace?.hasProject && openTab);
+  useEffect(() => {
+    if (!canOpen || !openTab || finishedAtMs === null || Date.now() - finishedAtMs > 20_000) return;
+    const timer = window.setTimeout(() => openTab("overview"), 700);
+    return () => window.clearTimeout(timer);
+    // Once, when the summary first appears for a build that just finished.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="bb-done">
+      <div className="bb-done__locked">
+        <span className="bb-done__squares" aria-hidden="true">
+          {Array.from({ length: total }, (_, index) => <span key={index} />)}
+        </span>
+        <span>{total} / {total} STEPS LOCKED{elapsedSeconds !== null ? ` · ${elapsedSeconds.toFixed(1)}s` : ""}</span>
+      </div>
+      {canOpen && (
+        <div className="bb-done__links">
+          {DONE_LINKS.map((link, index) => (
+            <button key={link.tab + link.label} type="button" className="bb-done__link" onClick={() => openTab?.(link.tab)}>
+              <span className="bb-done__n">{index + 1}</span>
+              {link.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** References only: never mount project/CAD content inside a message. */

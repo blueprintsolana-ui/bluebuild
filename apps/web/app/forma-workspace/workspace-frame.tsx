@@ -25,8 +25,8 @@ export default function WorkspaceFrame({
     <div
       className={
         homeMobileTopPadding
-          ? "craft-app relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-sans text-zinc-100"
-          : "craft-app relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-sans text-zinc-200"
+          ? "craft-app relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-[family-name:var(--craft-sans)] text-zinc-100"
+          : "craft-app relative h-[100dvh] w-full overflow-hidden bg-[#0f1117] font-[family-name:var(--craft-sans)] text-zinc-200"
       }
     >
       {/* The drafting grid shows through the open space around the chat (blue theme only). */}

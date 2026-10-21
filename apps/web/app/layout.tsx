@@ -7,6 +7,7 @@ import { themeBootstrapScript } from "../lib/theme";
 import { ThemeProvider } from "../lib/theme-provider";
 import "./globals.css";
 import "./craft.css";
+import "./bb-app.css";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=Caveat:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
         />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>

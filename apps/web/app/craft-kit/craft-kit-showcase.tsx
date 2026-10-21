@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { AgentPipelineCard } from "../forma-workspace/agent-pipeline";
+import { buildPipelineView, STEP_COPY, type PipelineEventInput } from "../../lib/pipeline-view";
 import {
   CrosshairReadout,
   Gear,
@@ -43,6 +45,38 @@ function demoSteps(done: number, failed = false): MachineStep[] {
     ...step,
     status: index < done ? "completed" : index === done ? (failed ? "failed" : "active") : "pending",
   }));
+}
+
+const PIPELINE_STEPS = Object.keys(STEP_COPY).map((id) => ({ id, label: STEP_COPY[id].name, agent: STEP_COPY[id].agent }));
+
+/** Feeds the agent pipeline card the same event shapes the backend sends, on a timer. */
+function PipelineCardDemo() {
+  const [tick, setTick] = useState(0);
+  const [startedAt] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((value) => (value >= PIPELINE_STEPS.length * 3 + 2 ? 0 : value + 1)), 900);
+    return () => window.clearInterval(timer);
+  }, []);
+  const done = Math.min(PIPELINE_STEPS.length, Math.floor(tick / 3));
+  const active = PIPELINE_STEPS[done];
+  const events: PipelineEventInput[] = [];
+  PIPELINE_STEPS.forEach((step, index) => {
+    if (index < done) events.push({ step_id: step.id, status: "started" }, { step_id: step.id, status: "completed" });
+  });
+  if (active) {
+    events.push({ step_id: active.id, status: "started" });
+    if (tick % 3 >= 1) events.push({ step_id: active.id, status: "provider_request_started", details: { schema: "ComponentSelection", model: "anthropic/claude-opus-5" } });
+    if (tick % 3 >= 2) events.push({ step_id: active.id, status: "provider_response_received", details: { actual_model: "claude-opus-5" } });
+  }
+  const states = Object.fromEntries(PIPELINE_STEPS.map((step, index) => [step.id, index < done ? "completed" : index === done ? "active" : "pending"]));
+  const view = buildPipelineView({ steps: PIPELINE_STEPS, states, events, activeStepId: active?.id || null, finished: false });
+  return (
+    <div className="craft-app">
+      <div className="craft-msg craft-msg--assistant craft-msg--build rounded-xl border">
+        <AgentPipelineCard view={view} state="running" jobId="job_frontend_demo-0000-0000-0000" signal="backend synced" startedAtMs={startedAt} />
+      </div>
+    </div>
+  );
 }
 
 /** Runs the machine through a fake job so its ticks, stamps and jam can be checked. */
@@ -155,6 +189,13 @@ export default function CraftKitShowcase() {
               ))}
             </div>
           </PaperCard>
+        </section>
+
+        <section>
+          <p className={label}>Agent pipeline card · simulated backend events</p>
+          <div className="mt-4">
+            <PipelineCardDemo />
+          </div>
         </section>
 
         <section>

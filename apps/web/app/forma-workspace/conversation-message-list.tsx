@@ -16,7 +16,8 @@ import {
 import CopyButton from "../../components/copy-button";
 import { webConfig } from "../../lib/config";
 import { FORMA_AGENT_RUNTIME_STORAGE_KEY } from "../../lib/opencode";
-import { ProjectUpdateCard } from "./chat-project-layout";
+import { BuildDoneSummary, ProjectUpdateCard } from "./chat-project-layout";
+import { pipelineSummary } from "../../lib/pipeline-view";
 
 export type ConversationMessage = {
   id: string;
@@ -185,15 +186,23 @@ export default function ConversationMessageList({
               : "assistant";
     const showPipeline = Boolean(message.pipelineProgress)
       && (!message.projectId || message.status === "error" || message.status === "cancelled");
+    // While a build runs, the pipeline card carries the status sentence and takes the full width.
+    const building = showPipeline && message.status === "loading";
+    const doneSummary = !isUser && message.status === "success" && message.projectId ? pipelineSummary(message.pipelineProgress) : null;
 
     return (
       <div
         key={message.id}
         className={`flex min-w-0 ${isUser ? "justify-end" : "justify-start"} ${projectLayout ? "mx-auto w-full max-w-3xl" : ""}`}
       >
-        <div className={`craft-msg craft-msg--${craftKind} min-w-0 max-w-[92%] overflow-hidden rounded-xl border px-3 py-2.5 sm:max-w-[86%] sm:px-4 sm:py-3 ${statusTone}`}>
+        <div className={`craft-msg craft-msg--${craftKind} ${building || (showPipeline && !isUser) ? "craft-msg--build w-full" : "max-w-[92%] sm:max-w-[86%]"} min-w-0 overflow-hidden rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 ${statusTone}`}>
           <div className="craft-msg__meta mb-2 flex min-w-0 flex-wrap items-center gap-2 text-[10px] font-medium text-zinc-500">
-            {message.status === "loading" ? (
+            {building ? (
+              <span className="bb-build-icon" aria-hidden="true">
+                <span className="bb-build-icon__teeth" />
+                <span className="bb-build-icon__ring" />
+              </span>
+            ) : message.status === "loading" ? (
               <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-400" />
             ) : message.status === "success" ? (
               <CheckCircle className="h-3.5 w-3.5 text-emerald-300" />
@@ -215,7 +224,7 @@ export default function ConversationMessageList({
               className="ml-auto"
             />
           </div>
-          <p className="break-anywhere whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+          {!building && <p className="break-anywhere whitespace-pre-wrap text-sm leading-6">{message.content}</p>}
           {runtimeOffline && (
             <div className="mt-3 border-t border-rose-300/15 pt-3">
               <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-rose-200/80">
@@ -333,6 +342,7 @@ export default function ConversationMessageList({
           )}
           {showPipeline && renderPipelineProgress(message)}
           <ProjectUpdateCard message={message} />
+          {doneSummary && <BuildDoneSummary {...doneSummary} />}
         </div>
       </div>
     );

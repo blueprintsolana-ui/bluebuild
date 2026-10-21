@@ -51,7 +51,8 @@ import {
   shouldOfferFailedBuildRetry,
 } from "../lib/conversation-build-state";
 import CopyButton from "../components/copy-button";
-import { PipelineMachine, type MachineStepStatus } from "../components/craft";
+import { buildPipelineView } from "../lib/pipeline-view";
+import { AgentPipelineCard } from "./forma-workspace/agent-pipeline";
 import {
   useAdminSession,
   useBackendLogs,
@@ -8092,6 +8093,7 @@ function ChatWorkspace({
   return (
     <ChatProjectLayout
       history={history}
+      onOpenTab={onNamespaceChange}
       conversationKey={chatId || projectId || "project-chat"}
       projectId={projectId}
       project={(chatAvailable || readOnly) && projectId ? (
@@ -8404,7 +8406,6 @@ function AgentPipelineProgressView({
   const activeStepId = activeStep?.id || null;
   const nowMs = Date.now();
   const startedMs = timestampMs(progress.startedAt);
-  const elapsedSeconds = startedMs === null ? null : Math.max(1, Math.round((nowMs - startedMs) / 1000));
   const lastEventMs = pipelineEventTimestampMs(lastEvent);
   const quietMs = lastEventMs === null ? null : nowMs - lastEventMs;
   const isLoading = status === "loading";
@@ -8416,7 +8417,6 @@ function AgentPipelineProgressView({
   const isError = status === "error";
   const waitingForFirstEvent = isLoading && !events.length && startedMs !== null && nowMs - startedMs >= PIPELINE_STALE_AFTER_MS;
   const backendQuiet = isLoading && quietMs !== null && quietMs >= PIPELINE_STALE_AFTER_MS;
-  const completedCount = completedPipelineStepCount({ ...progress, steps });
   const visibleEvents = events.slice(compact ? -4 : -6);
   const signalLabel = isError
     ? "failed"
@@ -8431,106 +8431,31 @@ function AgentPipelineProgressView({
     : waitingForFirstEvent
       ? "starting"
       : "estimated";
-  const signalTone = isError
-    ? "border-rose-400/35 bg-rose-950/25 text-rose-200"
-    : isCancelled
-    ? "border-amber-300/35 bg-amber-950/20 text-amber-100"
-    : isSuccess
-    ? "border-emerald-300/35 bg-emerald-950/20 text-emerald-100"
-    : backendQuiet || waitingForFirstEvent
-    ? "border-emerald-500/25 bg-emerald-950/25 text-emerald-100"
-    : progress.synced
-      ? "border-emerald-500/25 bg-emerald-950/25 text-emerald-100"
-      : "border-slate-500/25 bg-black/25 text-slate-400";
+  const stepStates = Object.fromEntries(
+    steps.map((step) => [step.id, pipelineStepStatus({ ...progress, steps }, step, activeStepId, isLoading)]),
+  );
+  const view = buildPipelineView({ steps, states: stepStates, events, activeStepId, finished: isSuccess, failed: isError });
+  const quietNote = backendQuiet || waitingForFirstEvent
+    ? events.length
+      ? `still working · no update for ${formatDurationSeconds(Math.round((quietMs || 0) / 1000))}`
+      : "starting · waiting for the first progress update"
+    : null;
 
   return (
-    <div className="mt-3 rounded-xl border border-white/5 bg-black/25 p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-medium text-zinc-500">Agent pipeline</span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${signalTone}`}>
-              {isError ? <AlertTriangle className="h-3 w-3" /> : isCancelled ? <Square className="h-3 w-3 fill-current" /> : isLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
-              {signalLabel}
-            </span>
-          </div>
-          {progress.jobId && (
-            <div className="mt-1 truncate font-mono text-[10px] text-zinc-600">{progress.jobId}</div>
-          )}
-        </div>
-        <div className="flex shrink-0 items-start gap-2">
-          {isLoading && onStop && (
-            <button
-              type="button"
-              onClick={onStop}
-              className="inline-flex h-7 items-center gap-1 rounded-lg border border-amber-300/40 px-2 text-[10px] font-medium text-amber-100 transition-colors hover:bg-amber-300/10"
-              aria-label="Stop agent pipeline"
-              title="Stop agent pipeline"
-            >
-              <Square className="h-3 w-3 fill-current" />
-              Stop
-            </button>
-          )}
-          {isError && onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              disabled={resetting}
-              className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 text-[10px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:cursor-wait disabled:opacity-60"
-              aria-label="Reset failed generation job"
-              title="Reset failed generation job and try again"
-            >
-              <RefreshCw className={`h-3 w-3 ${resetting ? "animate-spin" : ""}`} />
-              {resetting ? "Resetting" : "Reset job"}
-            </button>
-          )}
-          <div className="text-right">
-            <div className="font-mono text-[11px] font-semibold text-zinc-300">{completedCount}/{steps.length}</div>
-            <div className="text-[10px] text-zinc-600">{formatDurationSeconds(elapsedSeconds)}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex min-w-0 items-start gap-2 rounded-lg border border-white/5 bg-[#111216] p-3">
-        {isError ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" /> : isCancelled ? <Square className="mt-0.5 h-4 w-4 shrink-0 fill-current text-amber-300" /> : isLoading ? <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-emerald-400" /> : <Cpu className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />}
-        <div className="min-w-0">
-          <div className="truncate text-xs font-semibold text-zinc-100">{activeStep?.label || "Preparing job"}</div>
-          <div className="mt-1 truncate text-[11px] font-medium text-emerald-400">{activeStep?.agent || "Bluebuild runtime"}</div>
-          {activeStep?.description && !compact && (
-            <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-zinc-500">{activeStep.description}</div>
-          )}
-          {lastEvent && (
-            <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-zinc-500">
-              <span>Last: {lastEvent.label || lastEvent.step_id}</span>
-              <span>{String(lastEvent.status).replace(/_/g, " ")}</span>
-              <span>{formatPipelineAge(lastEvent.observed_at, nowMs)} ago</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {(backendQuiet || waitingForFirstEvent) && (
-        <div className="mt-2 flex gap-2 rounded-lg border border-emerald-500/20 bg-emerald-950/20 p-2 text-[11px] leading-4 text-emerald-100">
-          <RefreshCw className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-          <span>
-            {events.length
-              ? `Still working. The active provider or backend call has been running for ${formatDurationSeconds(Math.round((quietMs || 0) / 1000))} since the last progress update.`
-              : "Still starting. The job poller is active and waiting for the first backend progress update."}
-          </span>
-        </div>
-      )}
-
-      <PipelineMachine
-        state={isError ? "failed" : isCancelled ? "stopped" : isLoading ? "running" : "done"}
+    <div className="mt-1">
+      <AgentPipelineCard
+        view={view}
+        state={isError ? "failed" : isCancelled ? "stopped" : "running"}
+        jobId={progress.jobId}
+        signal={signalLabel}
+        startedAtMs={startedMs}
+        endedAtMs={lastEventMs}
+        quietNote={quietNote}
         canRetry={Boolean(onReset)}
-        steps={steps.map((step) => ({
-          id: step.id,
-          label: step.label,
-          agent: step.agent,
-          status: pipelineStepStatus({ ...progress, steps }, step, activeStepId, isLoading) as MachineStepStatus,
-        }))}
+        onStop={isLoading ? onStop : undefined}
+        onReset={isError ? onReset : undefined}
+        resetting={resetting}
       />
-
       {!isLoading && (
         <AgentPipelineEventsDisclosure eventCount={events.length}>
           {visibleEvents.length ? (
