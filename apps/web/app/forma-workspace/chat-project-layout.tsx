@@ -197,7 +197,7 @@ function ChatProjectLayoutSession({ conversationKey, projectId = null, project, 
           {visible && (
             <section
               id={projectDomId} ref={projectRef} tabIndex={-1}
-              className={`${styles.project} ${fullScreen ? styles.fullScreen : ""}`}
+              className={`${styles.project} bb-panel ${fullScreen ? styles.fullScreen : ""}`}
               role={fullScreen ? "dialog" : "region"} aria-modal={fullScreen || undefined}
               aria-label="Project workspace" data-testid="project-pane"
             >
@@ -222,22 +222,22 @@ export function ChatProjectSurface({ title, children, leading, projectId, shareT
   const workspace = useContext(ProjectWorkspace);
   return (
     <div className={styles.surface} data-testid="project-surface">
-      <header className={`${styles.surfaceHeader} ${leading ? styles.standaloneHeader : ""}`}>
+      <header className={`${styles.surfaceHeader} bb-panel-head ${leading ? styles.standaloneHeader : ""}`}>
         {leading}
-        <div className={styles.identity}>
-          <div className={styles.eyebrow}><Layers className={styles.icon} /> <ProjectVersionLabel /></div>
-          <div className={styles.surfaceTitle}>{title}</div>
+        <div className={`${styles.identity} bb-panel-identity`}>
+          <div className={`${styles.eyebrow} bb-panel-eyebrow`}><Layers className={styles.icon} /> <ProjectVersionLabel /></div>
+          <div className={`${styles.surfaceTitle} bb-panel-title`}>{title}</div>
         </div>
         <div className={styles.actions} role="group" aria-label="Project surface">
           {projectId && <ShareProjectButton projectId={projectId} title={shareTitle || "Bluebuild project"} isPrivate={isPrivate} />}
           <ProjectHistoryButton />
           {workspace && (
             <>
-              <button type="button" className={styles.button} onClick={workspace.toggleFullScreen} aria-pressed={workspace.fullScreen} aria-label={workspace.fullScreen ? "Exit project full screen" : "View project full screen"}>
+              <button type="button" className={`${styles.button} bb-panel-btn`} onClick={workspace.toggleFullScreen} aria-pressed={workspace.fullScreen} aria-label={workspace.fullScreen ? "Exit project full screen" : "View project full screen"}>
                 {workspace.fullScreen ? <Minimize2 className={styles.icon} /> : <Maximize2 className={styles.icon} />}
                 <span className={styles.buttonLabel}>{workspace.fullScreen ? "Exit full screen" : "Full screen"}</span>
               </button>
-              <button type="button" className={styles.button} onClick={workspace.closeProject} aria-label="Close project"><X className={styles.icon} /></button>
+              <button type="button" className={`${styles.button} bb-panel-btn`} onClick={workspace.closeProject} aria-label="Close project"><X className={styles.icon} /></button>
             </>
           )}
         </div>
@@ -272,7 +272,7 @@ function ShareProjectButton({ projectId, title, isPrivate }: { projectId: string
 
   return <button
     type="button"
-    className={styles.button}
+    className={`${styles.button} bb-panel-btn`}
     onClick={() => { void share(); }}
     aria-label={copied ? "Project link copied" : "Share project"}
     title={isPrivate ? "Share link (only people with access can open this private project)" : "Share project link"}
@@ -287,7 +287,7 @@ const DONE_LINKS: { tab: string; label: string }[] = [
   { tab: "schematic", label: "Wiring diagram" },
   { tab: "mechanical", label: "3D model" },
   { tab: "assembly", label: "Build guide" },
-  { tab: "overview", label: "Pitch & coin" },
+  { tab: "launch", label: "Pitch & coin" },
 ];
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import {
@@ -11,6 +11,7 @@ import {
   Cpu,
   Database,
   ExternalLink,
+  Film,
   GitBranch,
   Maximize2,
   Monitor,
@@ -22,7 +23,6 @@ import {
 } from "lucide-react";
 
 import { Stamp } from "../../components/craft";
-import { DesignCoinCard } from "../../components/design-coin-card";
 import ImageLightbox from "../../components/image-lightbox";
 import { isHardwareReferenceCandidate, type ProjectImageCandidate } from "../../lib/project-images";
 import { resolveProductModel } from "../../lib/product-model";
@@ -136,19 +136,19 @@ export function OverviewPanel({
   const showHardwareReference = productImages.length > 0 && referenceImages.length > 0;
 
   return (
-    <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden bg-[var(--forma-page)] px-4 py-5 text-[var(--forma-text)] sm:px-5 sm:py-6">
-      <div className="mx-auto min-w-0 max-w-[890px]">
+    <div className="bb-sheet h-full min-w-0 overflow-y-auto overflow-x-hidden">
+      <div className="bb-sheet__body">
         {(showProductImage || productModel) && (
-          <div className={showProductImage && productModel ? "grid gap-4 md:grid-cols-2" : ""}>
+          <div className="bb-overview-grid">
             {showProductImage && (
-              <div className="min-w-0">
-                <div className="relative overflow-hidden rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface-muted)]">
+              <div className="flex min-w-0 flex-col gap-2.5">
+                <div className="bb-render">
                   {activeImage ? (
                     <button
                       type="button"
                       onClick={() => setLightboxIndex(imageIndex)}
                       aria-label={`Open ${activeImage.label} full size`}
-                      className="group block w-full cursor-zoom-in"
+                      className="group block h-full w-full cursor-zoom-in"
                     >
                       <Image
                         src={activeImage.src}
@@ -157,9 +157,9 @@ export function OverviewPanel({
                         height={1}
                         unoptimized
                         onError={() => setImageIndex((current) => current + 1)}
-                        className="h-[280px] w-full object-cover object-center transition duration-300 group-hover:scale-[1.02] sm:h-[380px]"
+                        className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
                       />
-                      <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-md border border-[var(--forma-border)] bg-[rgb(var(--forma-chrome-rgb)/0.92)] px-2 py-1 text-[11px] font-medium text-[var(--forma-text-strong)] opacity-90 shadow-sm backdrop-blur-sm transition group-hover:opacity-100">
+                      <span className="bb-render__chip is-bottom">
                         <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
                         View full size
                       </span>
@@ -167,36 +167,21 @@ export function OverviewPanel({
                   ) : (
                     <ImageUnavailableState failed={metadata.image_output_failed === true || metadata.image_output_status === "failed"} />
                   )}
-                  {activeImage && (
-                    <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-md border border-[var(--forma-border)] bg-[rgb(var(--forma-chrome-rgb)/0.92)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--forma-text-strong)] shadow-sm backdrop-blur-sm">
-                      {activeImage.label}
-                    </div>
-                  )}
+                  {activeImage && <span className="bb-render__chip is-top">{activeImage.label}</span>}
                 </div>
 
                 {heroImages.length > 1 && (
-                  <div className={`mt-3 grid grid-cols-2 gap-2 ${heroImages.length >= 4 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+                  <div className="bb-thumbs" style={{ gridTemplateColumns: `repeat(${Math.min(heroImages.length, 4)}, minmax(0, 1fr))` }}>
                     {heroImages.slice(0, 4).map((candidate, index) => (
                       <button
                         key={`${candidate.src}-${index}`}
                         type="button"
                         onClick={() => setImageIndex(index)}
                         onDoubleClick={() => setLightboxIndex(index)}
-                        className={`min-w-0 rounded-lg border p-1.5 text-left transition ${
-                          imageIndex === index
-                            ? "border-[var(--forma-text-strong)] bg-[var(--forma-surface)] text-[var(--forma-text-strong)]"
-                            : "border-[var(--forma-border)] bg-[var(--forma-surface)] text-[var(--forma-text-muted)] hover:border-[var(--forma-text-muted)] hover:text-[var(--forma-text-strong)]"
-                        }`}
+                        className={`bb-thumb ${imageIndex === index ? "is-active" : ""}`}
                       >
-                        <Image
-                          src={candidate.src}
-                          alt={candidate.label}
-                          width={1}
-                          height={1}
-                          unoptimized
-                          className="h-16 w-full rounded-md bg-[var(--forma-surface-muted)] object-cover"
-                        />
-                        <div className="mt-1.5 truncate text-[10px] font-medium">{candidate.label}</div>
+                        <Image src={candidate.src} alt={candidate.label} width={1} height={1} unoptimized className="bb-thumb__img" />
+                        <span className="bb-thumb__label">{candidate.label}</span>
                       </button>
                     ))}
                   </div>
@@ -333,38 +318,22 @@ export function OverviewPanel({
           </section>
         )}
 
-        <div className={`min-w-0 ${showProductImage ? "mt-6 border-t border-[var(--forma-border)] pt-5 sm:pt-6" : ""}`}>
-          <h1 className="break-words text-xl font-semibold tracking-tight text-[var(--forma-text-strong)] sm:text-2xl">{title}</h1>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {metadata.workflow && (
-              <span className="max-w-full break-words rounded-md border border-[rgb(var(--forma-cyan-rgb)/0.35)] bg-[rgb(var(--forma-cyan-rgb)/0.1)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[rgb(var(--forma-cyan-rgb))]">
-                {metadata.workflow}
-              </span>
-            )}
-            {showModelName && llmProvider && llmModel && (
-              <span className="max-w-full break-words rounded-md border border-[rgb(var(--forma-violet-rgb)/0.35)] bg-[rgb(var(--forma-violet-rgb)/0.1)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[rgb(var(--forma-violet-rgb))]">
-                {projectLlmDisplayLabel(llmProvider, llmModel)}
-              </span>
-            )}
+        <div className="flex min-w-0 flex-col gap-5">
+          {(showProductImage || productModel) && <div className="bb-rule" />}
+          <h2 className="bb-sheet__title">{title}</h2>
+          <div className="flex flex-wrap gap-2">
+            {metadata.workflow && <span className="bb-req is-workflow">{String(metadata.workflow).toUpperCase()}</span>}
+            {showModelName && llmProvider && llmModel && <span className="bb-req is-workflow">{projectLlmDisplayLabel(llmProvider, llmModel)}</span>}
             {features.slice(0, 12).map((feature, index) => (
-              <span key={`${feature}-${index}`} className="max-w-full break-words rounded-md border border-[var(--forma-border)] px-2.5 py-1 text-[11px] font-medium text-[var(--forma-text-muted)]">
+              <span key={`${feature}-${index}`} className="bb-req">
                 {String(feature).split(":")[0]}
               </span>
             ))}
           </div>
 
-          {projectId && (
-            <DesignCoinCard
-              projectId={projectId}
-              title={title}
-              description={description}
-              images={heroImages.map((candidate) => ({ src: candidate.src, label: candidate.label }))}
-            />
-          )}
-
-          <div className="mt-6">
-            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--forma-text-muted)]">Technical Description</div>
-            <p className="mt-3 max-w-3xl break-words text-sm leading-7 text-[var(--forma-text-body)]">{description}</p>
+          <div className="flex flex-col gap-2">
+            <span className="bb-eyebrow">Technical description</span>
+            <p className="bb-sheet__prose">{description}</p>
           </div>
 
           {systemArchitecture?.root && (
@@ -447,6 +416,86 @@ function SystemTreeNode({ node, depth }: { node: Record<string, any>; depth: num
   );
 }
 
+function imageFormat(src: string): string {
+  const match = /\.(png|jpe?g|webp|gif)(?:[?#]|$)/i.exec(src);
+  if (match) return match[1].toUpperCase().replace("JPEG", "JPG");
+  const data = /^data:image\/(png|jpe?g|webp)/i.exec(src);
+  return data ? data[1].toUpperCase().replace("JPEG", "JPG") : "IMAGE";
+}
+
+/**
+ * Media tab (design: render tiles + an ALPHA turntable note). The real video tools render below
+ * when video generation is switched on, or when this project already has saved videos.
+ */
+export function MediaPanel({
+  images,
+  videoAvailable,
+  unavailableReason = null,
+  children,
+}: {
+  images: ProjectImageCandidate[];
+  videoAvailable: boolean;
+  unavailableReason?: string | null;
+  children?: ReactNode;
+}) {
+  const renders = images.filter((candidate) => !isHardwareReferenceCandidate(candidate));
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  return (
+    <div className="bb-sheet h-full min-w-0 overflow-y-auto overflow-x-hidden">
+      <div className="bb-sheet__body gap-3.5">
+        <div className="flex items-center gap-3">
+          <span className="bb-icon-box"><Film className="h-4 w-4" /></span>
+          <span className="flex flex-col gap-0.5">
+            <span className="bb-eyebrow">Media</span>
+            <span className="text-lg font-semibold">Renders &amp; video</span>
+          </span>
+        </div>
+        {renders.length ? (
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))" }}>
+            {renders.map((candidate, index) => (
+              <button key={`${candidate.src}-${index}`} type="button" className="bb-media-tile" onClick={() => setLightboxIndex(index)} aria-label={`Open ${candidate.label} full size`}>
+                <Image src={candidate.src} alt={candidate.label} width={1} height={1} unoptimized className="bb-media-tile__img" />
+                <span className="bb-media-tile__label">
+                  <span className="truncate">{candidate.label}</span>
+                  <span className="bb-media-tile__fmt">{imageFormat(candidate.src)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="bb-hatch grid aspect-[16/6] place-items-center rounded-[10px] border border-[rgba(120,160,230,0.35)]">
+            <span className="font-[family-name:var(--craft-mono)] text-[11px] font-medium uppercase tracking-[0.14em] text-[#4a6fa8]">No renders for this revision</span>
+          </div>
+        )}
+        {!videoAvailable && (
+          <div className="bb-card is-amber">
+            <span className="font-[family-name:var(--craft-mono)] text-[11px] font-bold tracking-[0.14em] text-[#ffb547]">✦ ALPHA</span>
+            <span className="text-[15px] text-[#f4f7fb]">Turntable video generation is coming soon.</span>
+            <span className="text-[13px] text-[#a9bedd]">It will render a short 360° spin from the same 3D model.</span>
+            {unavailableReason && <span className="text-xs text-[#7f9ccc]">{unavailableReason}</span>}
+          </div>
+        )}
+        {children}
+      </div>
+      {lightboxIndex !== null && renders.length > 0 && (
+        <ImageLightbox
+          images={renders}
+          index={Math.min(lightboxIndex, renders.length - 1)}
+          onIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Production runs for the parts list's quantity switch (design: 1 UNIT / 1K / 10K). */
+const BOM_RUNS = [
+  { key: "1", label: "1 unit", quantity: 1 },
+  { key: "1K", label: "1K units", quantity: 1000 },
+  { key: "10K", label: "10K units", quantity: 10000 },
+] as const;
+
 export function BomPanel({
   components,
   metrics,
@@ -460,123 +509,78 @@ export function BomPanel({
   fabricationCost?: number;
   canDownloadAssets?: boolean;
 }) {
+  const [run, setRun] = useState<(typeof BOM_RUNS)[number]>(BOM_RUNS[0]);
+  const unitCost = metrics.totalCost;
   return (
-    <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden bg-[var(--forma-page)] px-4 py-5 text-[var(--forma-text)] sm:px-5 sm:py-6">
-      <div className="mx-auto flex min-w-0 max-w-[890px] flex-col gap-4">
-        {components.length > 0 && (
-          <div className="space-y-3 lg:hidden">
-            {components.map((component) => {
-              const tone = categoryTone[component.category?.toLowerCase()] || categoryTone.default;
-              const Icon = iconForCategory(component.category);
-              const subtotal = component.extended_price ?? (component.unit_price || 0) * (component.quantity || 1);
-              const itemKey = component.line_id || component.ref_des || component.part_definition_id;
+    <div className="bb-sheet h-full min-w-0 overflow-y-auto overflow-x-hidden">
+      <div className="bb-sheet__body is-tight">
+        <div className="flex flex-wrap items-end gap-3.5">
+          <div className="flex flex-col gap-1">
+            <span className="bb-eyebrow is-amber">Parts list · {components.length} items</span>
+            <span className="bb-sheet__h">Bill of materials</span>
+          </div>
+          <span className="flex-1" />
+          <div className="bb-units" role="group" aria-label="Production run">
+            {BOM_RUNS.map((option) => (
+              <button key={option.key} type="button" aria-pressed={run.key === option.key} className={run.key === option.key ? "is-active" : ""} onClick={() => setRun(option)}>
+                {option.key === "1" ? "1 unit" : option.key}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        {components.length > 0 ? (
+          <div className="bb-bom" role="table" aria-label="Bill of materials">
+            <div className="bb-bom__row is-head" role="row">
+              <span role="columnheader">#</span>
+              <span role="columnheader">Part</span>
+              <span role="columnheader">Spec</span>
+              <span role="columnheader">Source</span>
+              <span role="columnheader" className="text-right">Unit</span>
+            </div>
+            {components.map((component, index) => {
+              const quantity = Number(component.quantity || 1);
+              const refs = Array.isArray(component.instance_refs) ? component.instance_refs.join(", ") : "";
               return (
-                <article key={itemKey} className="rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface)] p-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${tone.border} ${tone.bg}`}>
-                      <Icon className={`h-5 w-5 ${tone.text}`} />
+                <div key={component.line_id || component.ref_des || component.part_definition_id || index} className="bb-bom__row" role="row">
+                  <span className="bb-bom__n" role="cell">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="bb-bom__part" role="cell">
+                    <span>
+                      {component.name}
+                      {quantity > 1 && <span className="bb-bom__qty"> × {quantity}</span>}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-sm font-semibold text-[var(--forma-text-strong)]">{component.name}</h3>
-                      <p className="mt-1.5 break-words text-xs leading-5 text-[var(--forma-text-secondary)]">{component.rationale}</p>
-                      {Array.isArray(component.instance_refs) && component.instance_refs.length > 0 && (
-                        <p className="mt-1.5 break-words text-[10px] font-medium text-[var(--forma-text-muted)]">
-                          {component.instance_refs.join(", ")}
-                        </p>
-                      )}
-                      <CategoryBadge category={component.category} />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] px-3 py-2">
-                      <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">Qty</div>
-                      <div className="mt-1 font-medium text-[var(--forma-text-body)]">{component.quantity}</div>
-                    </div>
-                    <div className="rounded-lg border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] px-3 py-2 text-right">
-                      <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">Subtotal</div>
-                      <div className="mt-1 font-semibold text-[var(--forma-text-strong)]">~${subtotal.toFixed(2)}</div>
-                    </div>
-                    <div className="rounded-lg border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] px-3 py-2">
-                      <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">Unit</div>
-                      <div className="mt-1 font-medium text-[var(--forma-text-body)]">~${Number(component.unit_price || 0).toFixed(2)}</div>
-                    </div>
-                    <div className="min-w-0 rounded-lg border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] px-3 py-2">
-                      <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">Source</div>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {getSourcesForComponent(component).map((source) => (
-                          <ComponentSourceAction
-                            key={`${source.label}-${source.href}`}
-                            source={source}
-                            component={component}
-                            canDownloadAssets={canDownloadAssets}
-                            className="inline-flex justify-center px-2 py-1 text-[10px]"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </article>
+                    {component.rationale && <span className="bb-bom__why">{component.rationale}</span>}
+                  </span>
+                  <span className="bb-bom__spec" role="cell">{[component.category, refs].filter(Boolean).join(" · ")}</span>
+                  <span className="bb-bom__src" role="cell">
+                    {getSourcesForComponent(component).map((source) => (
+                      <ComponentSourceAction key={`${source.label}-${source.href}`} source={source} component={component} canDownloadAssets={canDownloadAssets} />
+                    ))}
+                  </span>
+                  <span className="bb-bom__unit" role="cell">~${Number(component.unit_price || 0).toFixed(2)}</span>
+                </div>
               );
             })}
           </div>
+        ) : (
+          <p className="bb-note">No parts were generated for this revision.</p>
         )}
 
-        {components.length > 0 && (
-          <div className="hidden overflow-hidden rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface)] lg:block">
-            <div className="overflow-x-auto">
-              <div className="min-w-[980px]">
-                <div className="grid grid-cols-[minmax(420px,1fr)_110px_110px_150px_140px] border-b border-[var(--forma-border)] bg-[var(--forma-surface-muted)] px-5 py-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">
-                  <span>Part</span>
-                  <span className="text-center">Qty</span>
-                  <span>Unit</span>
-                  <span>Source</span>
-                  <span className="text-right">Subtotal</span>
-                </div>
-                <div className="divide-y divide-[var(--forma-border)]">
-                  {components.map((component) => (
-                    <div key={component.line_id || component.ref_des || component.part_definition_id} className="grid grid-cols-[minmax(420px,1fr)_110px_110px_150px_140px] items-center px-5 py-4">
-                      <div className="flex items-start gap-4">
-                        <PartThumb component={component} />
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-[var(--forma-text-strong)]">{component.name}</h3>
-                          <div className="mt-1 text-xs text-[var(--forma-text-muted)]">{component.category}</div>
-                          <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--forma-text-secondary)]">{component.rationale}</p>
-                          {Array.isArray(component.instance_refs) && component.instance_refs.length > 0 && (
-                            <p className="mt-1.5 text-xs font-medium text-[var(--forma-text-muted)]">{component.instance_refs.join(", ")}</p>
-                          )}
-                          <CategoryBadge category={component.category} />
-                        </div>
-                      </div>
-                      <div className="text-center text-sm text-[var(--forma-text-body)]">{component.quantity}</div>
-                      <div className="text-sm text-[var(--forma-text-body)]">~${Number(component.unit_price || 0).toFixed(2)}</div>
-                      <div className="flex flex-col items-start gap-2">
-                        {getSourcesForComponent(component).map((source) => (
-                          <ComponentSourceAction
-                            key={`${source.label}-${source.href}`}
-                            source={source}
-                            component={component}
-                            canDownloadAssets={canDownloadAssets}
-                            className="inline-flex min-w-[86px] justify-center px-3 py-1.5 text-xs"
-                          />
-                        ))}
-                      </div>
-                      <div className="text-right text-sm font-semibold text-[var(--forma-text-strong)]">~${Number(component.extended_price ?? ((component.unit_price || 0) * (component.quantity || 1))).toFixed(2)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+        <div className="bb-totals">
+          <div className="bb-total">
+            <span className="bb-eyebrow">Unit cost @ {run.label}</span>
+            <span className="bb-total__value">~${unitCost.toFixed(2)}</span>
           </div>
-        )}
-
-        <div className="flex flex-col gap-1 rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--forma-text-muted)]">Total Estimated Cost</span>
-          <span className="text-xl font-semibold tracking-tight text-[var(--forma-text-strong)] sm:text-2xl">~${metrics.totalCost.toFixed(2)}</span>
+          <div className="bb-total">
+            <span className="bb-eyebrow">Run total</span>
+            <span className="bb-total__value">~${Math.round(unitCost * run.quantity).toLocaleString("en-US")}</span>
+          </div>
+          <div className="bb-total is-note">
+            Single-unit retail estimates from the sourcing agent. Volume pricing and tooling aren&apos;t included, so large runs usually cost less per unit.
+          </div>
         </div>
 
-        <section className="rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface)] p-4 sm:p-5">
+        <section className="bb-card">
           <div className="flex items-start justify-between gap-4 border-b border-[var(--forma-border)] pb-4">
             <div className="min-w-0">
               <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forma-text-strong)]">CAD Sources</h2>
@@ -677,7 +681,9 @@ export function MechanicalPanel({
   mechanical,
   cadModel,
   systemArchitecture,
+  title,
 }: {
+  title?: string;
   toggles: Record<string, boolean>;
   setToggles: (value: any) => void;
   electricalActive: boolean;
@@ -704,60 +710,64 @@ export function MechanicalPanel({
   const [view, setView] = useState<"product" | "layout">(hasProductModel ? "product" : "layout");
   const showProduct = view === "product" && productModel;
 
+  const viewSwitch = productModel ? (
+    <div role="group" aria-label="Mechanical view" className="bb-seg">
+      {[
+        { value: "product" as const, label: "3D product" },
+        { value: "layout" as const, label: "Engineering layout" },
+      ].map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={view === option.value}
+          className={view === option.value ? "is-active" : ""}
+          onClick={() => setView(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  if (showProduct) {
+    return (
+      <div className="relative h-full min-h-[420px] w-full">
+        <ProductModelViewer
+          key={`${productModel.parts.length}:${productModel.extent.join(",")}`}
+          model={productModel}
+          variant="full"
+          title={title}
+          headerAction={viewSwitch}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex h-full min-h-[420px] w-full flex-col overflow-hidden bg-[var(--forma-page)]">
-      {productModel && (
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--forma-border)] px-4 py-2">
-          <div role="group" aria-label="Mechanical view" className="flex rounded-md border border-[var(--forma-border)] bg-[var(--forma-surface)] p-0.5 text-[11px] font-medium">
-            {[
-              { value: "product" as const, label: "3D product" },
-              { value: "layout" as const, label: "Engineering layout" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={view === option.value}
-                onClick={() => setView(option.value)}
-                className={`rounded px-2.5 py-1 transition ${
-                  view === option.value
-                    ? "bg-[var(--forma-text-strong)] text-[var(--forma-page)]"
-                    : "text-[var(--forma-text-muted)] hover:text-[var(--forma-text-strong)]"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <span className="hidden text-[11px] text-[var(--forma-text-muted)] sm:block">
-            {view === "product" ? "Same model as the Overview and the renders." : "Part placements and clearances from the enclosure plan."}
-          </span>
+      {viewSwitch && (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#3a70c4] bg-[#0e2a57] px-4 py-2">
+          {viewSwitch}
+          <span className="bb-eyebrow hidden sm:block">Part placements and clearances from the enclosure plan</span>
         </div>
       )}
-      {showProduct ? (
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="mx-auto max-w-4xl">
-            <ProductModelViewer key={`${productModel.parts.length}:${productModel.extent.join(",")}`} model={productModel} />
-          </div>
-        </div>
-      ) : (
       <div className="relative min-h-0 flex-1">
-      <MechanicalScene
-        systemArchitecture={systemArchitecture}
-        dimensions={dimensions}
-        components={components}
-        placements={placements}
-        relationships={relationships}
-        kinematics={kinematics}
-        articulatedBodies={cadModel?.articulated_bodies}
-        compliantPreview={compliantPreview}
-        features={features}
-        toggles={toggles}
-        setToggles={setToggles}
-        electricalActive={electricalActive}
-        setElectricalActive={setElectricalActive}
-      />
+        <MechanicalScene
+          systemArchitecture={systemArchitecture}
+          dimensions={dimensions}
+          components={components}
+          placements={placements}
+          relationships={relationships}
+          kinematics={kinematics}
+          articulatedBodies={cadModel?.articulated_bodies}
+          compliantPreview={compliantPreview}
+          features={features}
+          toggles={toggles}
+          setToggles={setToggles}
+          electricalActive={electricalActive}
+          setElectricalActive={setElectricalActive}
+        />
       </div>
-      )}
     </div>
   );
 }
@@ -767,30 +777,12 @@ function isCriticalIssue(issue: any) {
   return key === "critical" || key === "error";
 }
 
-function issueSeverityTone(severity: unknown) {
-  const key = String(severity || "").toLowerCase();
-  if (key === "critical" || key === "error") {
-    return {
-      well: "border-[rgb(var(--forma-red-rgb)/0.35)] bg-[rgb(var(--forma-red-rgb)/0.1)]",
-      chip: "border-[rgb(var(--forma-red-rgb)/0.35)] bg-[rgb(var(--forma-red-rgb)/0.1)] text-[rgb(var(--forma-red-rgb))]",
-    };
-  }
-  if (key === "warning") {
-    return {
-      well: "border-[var(--forma-border)] bg-[var(--forma-surface-muted)]",
-      chip: "border-[rgb(var(--forma-yellow-rgb)/0.35)] bg-[rgb(var(--forma-yellow-rgb)/0.1)] text-[rgb(var(--forma-yellow-rgb))]",
-    };
-  }
-  if (key === "info") {
-    return {
-      well: "border-[var(--forma-border)] bg-[var(--forma-surface-muted)]",
-      chip: "border-[rgb(var(--forma-cyan-rgb)/0.35)] bg-[rgb(var(--forma-cyan-rgb)/0.1)] text-[rgb(var(--forma-cyan-rgb))]",
-    };
-  }
-  return {
-    well: "border-[var(--forma-border)] bg-[var(--forma-surface-muted)]",
-    chip: "border-[var(--forma-border)] bg-[var(--forma-surface-muted)] text-[var(--forma-text-muted)]",
-  };
+/** Audit card tag per severity (design: REPAIRED / PASS / NOTE cards). */
+function auditTag(issue: any): { tag: string; tone: "red" | "amber" | "muted" } {
+  const key = String(issue?.severity || "").toLowerCase();
+  if (key === "critical" || key === "error") return { tag: "Revise", tone: "red" };
+  if (key === "warning") return { tag: "Check", tone: "amber" };
+  return { tag: "Note", tone: "muted" };
 }
 
 export function AssemblyPanel({
@@ -800,93 +792,105 @@ export function AssemblyPanel({
   assembly: any[];
   issues: any[];
 }) {
+  const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const doneCount = assembly.filter((step, index) => checked[step.step_num ?? index]).length;
+  const allDone = assembly.length > 0 && doneCount === assembly.length;
+  const critical = issues.some(isCriticalIssue);
   return (
-    <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden bg-[var(--forma-page)] px-4 py-5 text-[var(--forma-text)] sm:px-5 sm:py-6">
-      <div className="mx-auto min-w-0 max-w-[890px]">
-        <div className="mb-6 border-b border-[var(--forma-border)] pb-5">
-          <h2 className="break-words text-xl font-semibold tracking-tight text-[var(--forma-text-strong)]">Build Instructions</h2>
-          <p className="mt-2 text-xs text-[var(--forma-text-secondary)]">Sequential assembly from the generated hardware graph.</p>
+    <div className="bb-sheet h-full min-w-0 overflow-y-auto overflow-x-hidden">
+      <div className="bb-sheet__body is-tight">
+        <div className="flex flex-wrap items-end gap-3.5">
+          <div className="flex flex-col gap-1">
+            <span className="bb-eyebrow is-amber">
+              Build guide · {assembly.length} steps · {doneCount} / {assembly.length} done
+            </span>
+            <span className="bb-sheet__h">Assembly, in order</span>
+          </div>
+          {allDone && (
+            <Stamp tone="amber" rotate={-12} className="ml-auto self-center text-[13px]">
+              ✓ Approved
+            </Stamp>
+          )}
+        </div>
+        <div className="bb-guide-bar" role="progressbar" aria-valuemin={0} aria-valuemax={assembly.length} aria-valuenow={doneCount} aria-label="Build steps done">
+          <div style={{ width: `${assembly.length ? (doneCount / assembly.length) * 100 : 0}%` }} />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
-          <div className="space-y-4">
-            {assembly.map((step) => (
-              <section key={step.step_num} className="rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface)] p-4 sm:p-5">
-                <div className="flex gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] text-sm font-semibold text-[var(--forma-text-strong)]">
-                    {step.step_num}
+        {assembly.length === 0 && <p className="bb-note">No build steps were generated for this revision.</p>}
+        {assembly.map((step, index) => {
+          const key = step.step_num ?? index;
+          const done = Boolean(checked[key]);
+          return (
+            <div
+              key={key}
+              role="checkbox"
+              aria-checked={done}
+              tabIndex={0}
+              className={`bb-step-row ${done ? "is-done" : ""}`}
+              onClick={() => setChecked((current) => ({ ...current, [key]: !current[key] }))}
+              onKeyDown={(event) => {
+                if (event.key !== " " && event.key !== "Enter") return;
+                event.preventDefault();
+                setChecked((current) => ({ ...current, [key]: !current[key] }));
+              }}
+            >
+              <span className="bb-step-row__box">{done ? "✓" : ""}</span>
+              <span className="bb-step-row__n">{String(step.step_num ?? index + 1).padStart(2, "0")}</span>
+              <span className="flex min-w-0 flex-col gap-1.5">
+                <span className="bb-step-row__title">{step.title}</span>
+                <span className="bb-step-row__text">{step.description}</span>
+                {step.danger_flag && (
+                  <span className="bb-step-row__danger">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span className="min-w-0">{step.danger_message || "Pay close attention to safety constraints during this stage."}</span>
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-[var(--forma-text-strong)]">{step.title}</h3>
-                    <p className="mt-3 break-words text-sm leading-7 text-[var(--forma-text-body)]">{step.description}</p>
-                    {step.danger_flag && (
-                      <div className="mt-4 flex gap-2 rounded-lg border border-[rgb(var(--forma-yellow-rgb)/0.35)] bg-[rgb(var(--forma-yellow-rgb)/0.1)] p-3 text-sm leading-6 text-[rgb(var(--forma-yellow-rgb))]">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span className="min-w-0 break-words">{step.danger_message || "Pay close attention to safety constraints during this stage."}</span>
-                      </div>
-                    )}
-                    {step.affected_components?.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {step.affected_components.map((part: string) => (
-                          <span key={part} className="rounded-md border border-[var(--forma-border)] px-2 py-1 text-[10px] font-medium text-[var(--forma-text-muted)]">
-                            {part}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </section>
-            ))}
-          </div>
-
-          <div className="min-w-0 rounded-xl border border-[var(--forma-border)] bg-[var(--forma-surface)] p-4 sm:p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-[rgb(var(--forma-cyan-rgb))]" />
-              <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">Safety Audit</h3>
-              {issues.some(isCriticalIssue) ? (
-                <Stamp tone="red" rotate={-5} className="ml-auto">Revise</Stamp>
-              ) : (
-                <Stamp tone="amber" rotate={-6} className="ml-auto">Approved</Stamp>
-              )}
+                )}
+                {step.affected_components?.length > 0 && (
+                  <span className="flex flex-wrap gap-1.5">
+                    {step.affected_components.map((part: string) => (
+                      <span key={part} className="bb-step-row__part">{part}</span>
+                    ))}
+                  </span>
+                )}
+              </span>
             </div>
-            <p className="-mt-2 mb-4 text-[11px] leading-5 text-[var(--forma-text-muted)]">
-              {issues.some(isCriticalIssue)
-                ? "The automatic checks found problems to fix before building."
-                : "The automatic checks found nothing critical. Have a person review it before you build."}
-            </p>
-            {issues.length ? (
-              <div className="space-y-3">
-                {issues.map((issue, index) => {
-                  const tone = issueSeverityTone(issue.severity);
-                  return (
-                    <div key={`${issue.description}-${index}`} className={`rounded-lg border p-3 ${tone.well}`}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {isCriticalIssue(issue) && (
-                          <Stamp tone="red" rotate={-4} className="px-1.5 py-0 text-[10px]">
-                            Revise
-                          </Stamp>
-                        )}
-                        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] ${tone.chip}`}>
-                          {issue.severity}
-                        </span>
-                        {issue.category && (
-                          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--forma-text-muted)]">
-                            {issue.category}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-2 break-words text-xs leading-6 text-[var(--forma-text-secondary)]">{issue.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-[rgb(var(--forma-green-rgb)/0.35)] bg-[rgb(var(--forma-green-rgb)/0.1)] p-4 text-xs leading-6 text-[rgb(var(--forma-green-rgb))]">
-                All electrical nets validated safely.
-              </div>
-            )}
+          );
+        })}
+
+        <div className="bb-card is-spaced">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="h-4 w-4 text-[#a9bedd]" />
+            <span className="bb-eyebrow">Safety audit</span>
+            <span className={`bb-audit-stamp ${critical ? "is-revise" : ""}`}>{critical ? "Revise" : "Pass"}</span>
           </div>
+          <span className="text-[13px] text-[#a9bedd]">
+            {critical
+              ? "The automatic checks found problems to fix before building."
+              : "The automatic checks found nothing critical. Have a person review it before you build."}
+          </span>
+          {issues.length ? (
+            issues.map((issue, index) => {
+              const { tag, tone } = auditTag(issue);
+              return (
+                <div key={`${issue.description}-${index}`} className={`bb-audit is-${tone}`}>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="bb-audit__tag">{tag}</span>
+                    {issue.category && <span className="bb-audit__kind">{issue.category}</span>}
+                  </span>
+                  <span className="bb-audit__text">{issue.description}</span>
+                  {issue.troubleshooting && <span className="bb-audit__fix">{issue.troubleshooting}</span>}
+                </div>
+              );
+            })
+          ) : (
+            <div className="bb-audit is-green">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="bb-audit__tag">Pass</span>
+                <span className="bb-audit__kind">Wiring</span>
+              </span>
+              <span className="bb-audit__text">All electrical nets validated safely.</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -932,14 +936,14 @@ export function PartsSidebar({ components, issues, isValid }: { components: any[
 
 export function ImageUnavailableState({ failed = false }: { failed?: boolean }) {
   return (
-    <div className="flex h-[280px] flex-col items-center justify-center bg-[var(--forma-surface-muted)] px-8 text-center sm:h-[380px]">
-      <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--forma-border)] bg-[var(--forma-surface)] text-[var(--forma-text-muted)]">
-        {failed ? <AlertTriangle className="h-7 w-7" /> : <Box className="h-7 w-7" />}
+    <div className="bb-hatch flex h-full min-h-[220px] flex-col items-center justify-center px-8 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-md border border-[rgb(20_54_110/0.3)] text-[#4a6fa8]">
+        {failed ? <AlertTriangle className="h-6 w-6" /> : <Box className="h-6 w-6" />}
       </div>
-      <div className="mt-5 text-xs font-medium uppercase tracking-[0.16em] text-[var(--forma-text-strong)]">
-        {failed ? "Product image unavailable" : "Product image not generated"}
+      <div className="mt-4 font-[family-name:var(--craft-mono)] text-[11px] font-medium uppercase tracking-[0.14em] text-[#4a6fa8]">
+        {failed ? "Product render · unavailable" : "Product render · not generated"}
       </div>
-      <p className="mt-2 max-w-md text-xs leading-5 text-[var(--forma-text-muted)]">
+      <p className="mt-2 max-w-md text-xs leading-5 text-[#4a6fa8]">
         {failed
           ? "Image generation failed for this revision. The project data and build artifacts are still available."
           : "No generated product image is available for this revision."}

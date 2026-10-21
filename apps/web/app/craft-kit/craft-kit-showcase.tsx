@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 import { AgentPipelineCard } from "../forma-workspace/agent-pipeline";
+import { resolveProductModel } from "../../lib/product-model";
 import { buildPipelineView, STEP_COPY, type PipelineEventInput } from "../../lib/pipeline-view";
 import {
   CrosshairReadout,
@@ -46,6 +49,23 @@ function demoSteps(done: number, failed = false): MachineStep[] {
     status: index < done ? "completed" : index === done ? (failed ? "failed" : "active") : "pending",
   }));
 }
+
+const ProductModelViewer = dynamic(() => import("../../components/product-model-viewer"), { ssr: false });
+
+// A sample product model in the backend's format, for checking the Mechanical tab's viewer.
+const SAMPLE_MODEL = resolveProductModel(
+  {
+    parts: [
+      { label: "Bottle body", shape: "cylinder", size_mm: { x_mm: 76, y_mm: 76, z_mm: 250 }, position_mm: { x_mm: 0, y_mm: 0, z_mm: 125 }, color_hex: "#b9c2cc", finish: "metal", is_casing: true },
+      { label: "Lid", shape: "cylinder", size_mm: { x_mm: 70, y_mm: 70, z_mm: 24 }, position_mm: { x_mm: 0, y_mm: 0, z_mm: 262 }, color_hex: "#d9dde3", finish: "matte", is_casing: true },
+      { label: "OLED display", shape: "box", size_mm: { x_mm: 26, y_mm: 14, z_mm: 3 }, position_mm: { x_mm: 0, y_mm: 0, z_mm: 275 }, color_hex: "#1a1a1a", finish: "screen" },
+      { label: "Controller board", shape: "box", size_mm: { x_mm: 40, y_mm: 30, z_mm: 4 }, position_mm: { x_mm: 0, y_mm: 0, z_mm: 258 }, color_hex: "#2e7d4f", finish: "pcb", ref_des: "U1" },
+      { label: "LiPo battery", shape: "box", size_mm: { x_mm: 34, y_mm: 20, z_mm: 6 }, position_mm: { x_mm: 0, y_mm: 0, z_mm: 266 }, color_hex: "#c8ccd2", finish: "gloss", ref_des: "BT1" },
+      { label: "Temp probe", shape: "cylinder", size_mm: { x_mm: 6, y_mm: 6, z_mm: 120 }, position_mm: { x_mm: 0, y_mm: 0, z_mm: 190 }, color_hex: "#9aa3ad", finish: "metal", ref_des: "SEN1" },
+    ],
+  },
+  null,
+);
 
 const PIPELINE_STEPS = Object.keys(STEP_COPY).map((id) => ({ id, label: STEP_COPY[id].name, agent: STEP_COPY[id].agent }));
 
@@ -190,6 +210,15 @@ export default function CraftKitShowcase() {
             </div>
           </PaperCard>
         </section>
+
+        {SAMPLE_MODEL && (
+          <section>
+            <p className={label}>Mechanical tab viewer · sample product model</p>
+            <div className="relative mt-4 h-[560px] overflow-hidden rounded-md border border-[var(--craft-hairline)]">
+              <ProductModelViewer model={SAMPLE_MODEL} variant="full" title="Smart Sip Bottle" />
+            </div>
+          </section>
+        )}
 
         <section>
           <p className={label}>Agent pipeline card · simulated backend events</p>

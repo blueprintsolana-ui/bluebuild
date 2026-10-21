@@ -152,18 +152,30 @@ function ProjectHistorySession({ config, children }: { config: ProjectHistoryCon
 export function ProjectHistoryButton() {
   const history = useProjectHistory();
   if (!history) return null;
-  return <button type="button" className={styles.button} aria-expanded={history.open} aria-controls={history.drawerId}
+  return <button type="button" className={`${styles.button} bb-panel-btn`} aria-expanded={history.open} aria-controls={history.drawerId}
     onClick={() => history.setOpen(!history.open)}>
     <History className={styles.icon} /> History
   </button>;
+}
+
+/** Drawing-set revision letter: v1 → A, v2 → B … v27 → AA. */
+export function revisionLetter(revision: number | null | undefined): string {
+  let value = Math.max(1, Math.floor(revision || 1));
+  let letters = "";
+  while (value > 0) {
+    value -= 1;
+    letters = String.fromCharCode(65 + (value % 26)) + letters;
+    value = Math.floor(value / 26);
+  }
+  return letters;
 }
 
 export function ProjectVersionLabel() {
   const history = useProjectHistory();
   if (!history) return <>Current project</>;
   return <>{history.selection
-    ? history.selection.snapshot ? `Viewing v${history.selection.snapshot.revision}` : "Saved version"
-    : history.latestRevision ? `v${history.latestRevision} · Latest` : "Latest"}</>;
+    ? history.selection.snapshot ? `Viewing v${history.selection.snapshot.revision} · Rev ${revisionLetter(history.selection.snapshot.revision)}` : "Saved version"
+    : history.latestRevision ? `v${history.latestRevision} · Latest · Rev ${revisionLetter(history.latestRevision)}` : "Latest"}</>;
 }
 
 export function ProjectHistoryBody({ children }: { children: ReactNode }) {

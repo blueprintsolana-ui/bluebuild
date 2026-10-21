@@ -605,65 +605,6 @@ html[data-theme="solarized-dark"] .craft-app .craft-tab.is-active svg {
   }
 }
 
-/* Project viewer: tabs look like folder tabs on a drawing set. */
-html[data-theme="solarized-dark"] .craft-app .craft-folder-tabs {
-  align-items: flex-end;
-  gap: 2px;
-  padding-top: 8px;
-  border-bottom-color: var(--craft-hairline);
-  background-color: var(--craft-panel);
-  /* Still scrolls sideways on narrow screens, without a scrollbar cutting under the tabs. */
-  scrollbar-width: none;
-}
-
-html[data-theme="solarized-dark"] .craft-app .craft-folder-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-html[data-theme="solarized-dark"] .craft-app .craft-folder-tab {
-  position: relative;
-  height: 34px;
-  margin-bottom: -1px;
-  padding: 0 0.5rem;
-  border: 1px solid rgb(58 112 196 / 0.45);
-  border-bottom-color: var(--craft-hairline);
-  border-radius: 7px 11px 0 0;
-  background-color: rgb(20 54 110 / 0.75);
-  color: var(--craft-muted);
-  font-family: var(--craft-mono);
-  font-size: 11px;
-  letter-spacing: 0;
-  transform: translateY(3px);
-  transition: transform 160ms var(--craft-ease), color 160ms ease, background-color 160ms ease;
-}
-
-html[data-theme="solarized-dark"] .craft-app .craft-folder-tab:hover {
-  transform: translateY(1px);
-  background-color: rgb(28 74 145 / 0.8);
-  color: var(--craft-ink);
-}
-
-/* The open tab joins the sheet underneath it. */
-html[data-theme="solarized-dark"] .craft-app .craft-folder-tab.is-active {
-  z-index: 1;
-  border-color: var(--craft-hairline);
-  border-bottom-color: var(--forma-page);
-  background-color: var(--forma-page);
-  color: var(--craft-ink);
-  transform: none;
-  box-shadow: inset 0 2px 0 var(--craft-amber);
-}
-
-html[data-theme="solarized-dark"] .craft-app .craft-folder-tab.is-active svg {
-  color: var(--craft-amber);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html[data-theme="solarized-dark"] .craft-app .craft-folder-tab {
-    transition: none;
-  }
-}
-
 /* Mechanical counter: each digit is a drum of 0-9 that rolls to its value. */
 .craft-counter {
   display: inline-flex;

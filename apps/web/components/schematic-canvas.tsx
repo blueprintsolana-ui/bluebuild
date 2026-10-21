@@ -639,12 +639,13 @@ function buildSchematicGraph(project: any): SchematicGraph {
           type: "smoothstep",
           animated: false,
           label: undefined,
-          data: { label: edgeLabel(net, sourcePin, targetPin), net },
+          className: "bb-net-edge",
+          data: { label: edgeLabel(net, sourcePin, targetPin), net, netId: String(net.net_id || net.name || id) },
           style: {
             stroke: style.color,
             strokeWidth: style.width,
             opacity: 0.82,
-            strokeDasharray: style.dash || "none",
+            strokeDasharray: style.dash || "8 5",
           },
         });
       });
@@ -753,8 +754,29 @@ function ComponentViewOverlay({ data, onClose }: { data: SchematicNodeData; onCl
   );
 }
 
+/** One row per net for the list under the diagram: colour, name and type. */
+function netRows(project: any) {
+  return (Array.isArray(project?.nets) ? project.nets : [])
+    .map((net: any) => {
+      const netType = String(net.net_type || "").toLowerCase() || "default";
+      const style = schematicNetStyles[netType] || schematicNetStyles.default;
+      const voltage = typeof net.voltage === "number" ? `${net.voltage} V` : "";
+      return {
+        id: String(net.net_id || net.name || ""),
+        label: [net.name || net.net_id, net.net_type, voltage].filter(Boolean).join(" · "),
+        color: style.color,
+      };
+    })
+    .filter((row: { id: string }) => row.id);
+}
+
 export default function SchematicCanvas({ project }: SchematicCanvasProps) {
   const graph = useMemo(() => buildSchematicGraph(project), [project]);
+  const nets = useMemo(() => netRows(project), [project]);
+  const [hoveredNet, setHoveredNet] = useState<string | null>(null);
+  const validation = project?.validation || {};
+  const critical = Array.isArray(validation.critical) ? validation.critical.length : 0;
+  const warnings = Array.isArray(validation.warning) ? validation.warning.length : 0;
   const projectKey = schematicProjectKey(project);
   const [nodes, setNodes, onNodesChange] = useNodesState<SchematicNodeData>(
     restoreNodePositions(graph.nodes, projectKey)
@@ -779,21 +801,35 @@ export default function SchematicCanvas({ project }: SchematicCanvasProps) {
     setEdges(graph.edges);
   }, [graph, project, projectKey, setEdges, setNodes]);
 
+  // Hovering a net in the list highlights its wires and dims the rest (design: Electrical tab).
+  const shownEdges = useMemo(
+    () => hoveredNet
+      ? edges.map((edge) => {
+          const mine = (edge.data as { netId?: string } | undefined)?.netId === hoveredNet;
+          return { ...edge, style: { ...edge.style, opacity: mine ? 1 : 0.15, strokeWidth: mine ? 4 : edge.style?.strokeWidth } };
+        })
+      : edges,
+    [edges, hoveredNet],
+  );
+
   return (
-    <div className="relative flex h-full min-h-[620px] flex-col overflow-hidden bg-[var(--forma-page)]">
-      <div className="schematic-header flex min-h-[60px] flex-wrap items-center gap-3 border-b border-[var(--forma-border)] bg-[var(--forma-surface)] px-4 py-3">
-        <div className="mr-2 text-sm font-semibold tracking-tight text-[var(--forma-text-strong)]">Wiring diagram</div>
-        <div className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--forma-border)] bg-[var(--forma-surface-muted)] px-3 text-xs font-medium text-[var(--forma-text-strong)]">
-          <Cpu className="h-4 w-4 text-[var(--forma-text-muted)]" />
-          <span>{primaryControllerLabel(project)}</span>
+    <div className="bb-sheet relative flex h-full min-h-[620px] flex-col overflow-hidden">
+      <div className="schematic-header bb-wiring-head">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="bb-eyebrow is-amber">Wiring diagram · {nets.length} nets{nets.length ? " · hover a net" : ""}</span>
+          <span className="bb-sheet__h">Which pin goes where</span>
         </div>
-        <div className="ml-auto text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--forma-text-muted)]">
-          Click a component to view
+        <div className="bb-wiring-head__side">
+          <span className="bb-wiring-chip">
+            <Cpu className="h-4 w-4" />
+            <span>{primaryControllerLabel(project)}</span>
+          </span>
+          <span className="bb-eyebrow">Click a component to view</span>
         </div>
       </div>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={shownEdges}
         nodeTypes={schematicNodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -812,6 +848,30 @@ export default function SchematicCanvas({ project }: SchematicCanvasProps) {
         />
         <SchematicLegend />
       </ReactFlow>
+      {nets.length > 0 && (
+        <div className="bb-nets" onMouseLeave={() => setHoveredNet(null)}>
+          <div className="bb-nets__list">
+            {nets.map((net: { id: string; label: string; color: string }) => (
+              <button
+                key={net.id}
+                type="button"
+                className={`bb-net ${hoveredNet === net.id ? "is-hot" : ""}`}
+                onMouseEnter={() => setHoveredNet(net.id)}
+                onFocus={() => setHoveredNet(net.id)}
+                onBlur={() => setHoveredNet(null)}
+              >
+                <span className="bb-net__swatch" style={{ background: net.color }} />
+                {net.label}
+              </button>
+            ))}
+          </div>
+          <div className="bb-nets__checks">
+            <span className={critical ? "is-warn" : "is-ok"}>{critical ? `⚠ ${critical} critical issue${critical === 1 ? "" : "s"}` : "✓ No critical issues"}</span>
+            <span className={warnings ? "is-warn" : "is-ok"}>{warnings ? `⚠ ${warnings} warning${warnings === 1 ? "" : "s"}` : "✓ No warnings"}</span>
+            <span className="is-ok">{edges.length} connections drawn</span>
+          </div>
+        </div>
+      )}
       {viewedNode && <ComponentViewOverlay data={viewedNode.data} onClose={closeViewMode} />}
     </div>
   );

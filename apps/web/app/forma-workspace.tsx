@@ -51,6 +51,7 @@ import {
   shouldOfferFailedBuildRetry,
 } from "../lib/conversation-build-state";
 import CopyButton from "../components/copy-button";
+import { LaunchCoinPanel } from "../components/launch-coin-panel";
 import { buildPipelineView } from "../lib/pipeline-view";
 import { AgentPipelineCard } from "./forma-workspace/agent-pipeline";
 import {
@@ -83,7 +84,7 @@ import {
 import { ChatAttachmentButton, ChatAttachmentSelection, type ChatAttachmentControls } from "./forma-workspace/chat-attachments";
 import HomeChatView, { type GenerationMode } from "./forma-workspace/home-chat-view";
 import ChatProjectLayout, { ChatProjectSurface } from "./forma-workspace/chat-project-layout";
-import { ProjectHistoryProvider, useProjectHistory, type ProjectHistoryConfig } from "./forma-workspace/project-history";
+import { ProjectHistoryProvider, revisionLetter, useProjectHistory, type ProjectHistoryConfig } from "./forma-workspace/project-history";
 import ProjectRevisionPreview from "./forma-workspace/project-revision-preview";
 import { revisionId, revisionNumber, revisionFromProject } from "../lib/project-history";
 import ConversationMessageList, {
@@ -117,6 +118,7 @@ import {
   AssemblyPanel,
   BomPanel,
   MechanicalPanel,
+  MediaPanel,
   OverviewPanel,
 } from "./forma-workspace/project-detail-panels";
 import {
@@ -162,6 +164,7 @@ import {
   BookOpen,
   Download,
   Clapperboard,
+  Rocket,
 } from "lucide-react";
 
 const SchematicCanvas = dynamic(() => import("../components/schematic-canvas"), {
@@ -1557,6 +1560,7 @@ const workspaceTabs = [
   { id: "assembly", label: "Documentation", icon: BookOpen },
   { id: "exports", label: "Exports", icon: Download },
   { id: "video", label: "Media", icon: Clapperboard },
+  { id: "launch", label: "Launch coin", icon: Rocket },
 ];
 
 const workspaceTabNamespaces: Record<string, string> = {
@@ -1567,6 +1571,7 @@ const workspaceTabNamespaces: Record<string, string> = {
   schematic: "product.electrical",
   assembly: "project.docs",
   video: "product.visuals.video",
+  launch: "product.launch",
   jobs: "project.history.jobs",
   logs: "project.runtime.logs",
 };
@@ -1588,6 +1593,8 @@ function normalizeTab(tab: string | null) {
     billing: "bom",
     materials: "bom",
     media: "video",
+    coin: "launch",
+    pitch: "launch",
   };
   const normalized = aliases[tab] || tab;
   return workspaceTabs.some((item) => item.id === normalized) ? normalized : null;
@@ -4708,7 +4715,7 @@ export function FormaWorkspace({
 
     const sourceProjectId = currentProjectId;
     const sourceChatId = currentProjectChatId || activeChatId || newBuildChatId();
-    const targetNamespace = activeTab === "overview" || activeTab === "exports" ? null : workspaceNamespaceForTab(activeTab);
+    const targetNamespace = activeTab === "overview" || activeTab === "exports" || activeTab === "launch" ? null : workspaceNamespaceForTab(activeTab);
     const generationRun = beginGenerationRun("project-chat", sourceChatId);
     setActiveChatId(sourceChatId);
     rememberChatItem({
@@ -5893,6 +5900,7 @@ export function FormaWorkspace({
       case "mechanical":
         return (
           <MechanicalPanel
+            title={projectTitle}
             systemArchitecture={projectIR?.system_architecture}
             toggles={mechToggles}
             setToggles={setMechToggles}
@@ -5928,8 +5936,35 @@ export function FormaWorkspace({
         ) : null;
       case "video":
         return (
-          <VideoPanel {...projectVideo} />
+          <MediaPanel
+            images={projectImageCandidates}
+            videoAvailable={projectVideo.generationAvailable}
+            unavailableReason={projectVideo.generationUnavailableReason}
+          >
+            {(projectVideo.generationAvailable || projectVideo.gallery.length > 0) && (
+              <div className="bb-media-video">
+                <VideoPanel {...projectVideo} />
+              </div>
+            )}
+          </MediaPanel>
         );
+      case "launch": {
+        const renders = projectImageCandidates.filter((candidate) => !isHardwareReferenceCandidate(candidate));
+        return currentProjectId ? (
+          <LaunchCoinPanel
+            projectId={currentProjectId}
+            title={projectTitle}
+            description={projectDescription}
+            images={(renders.length ? renders : projectImageCandidates).map((candidate) => ({ src: candidate.src, label: candidate.label }))}
+            preview={{
+              heroImage: renders[0]?.src || null,
+              renderCount: renders.length,
+              hasModel: Boolean(projectIR?.assembly_metadata?.product_model),
+              unitCost: metrics.totalCost > 0 ? `$${metrics.totalCost.toFixed(2)}` : null,
+            }}
+          />
+        ) : null;
+      }
       case "jobs":
         return (
           <JobsPanel
@@ -8230,6 +8265,7 @@ function ChatWorkspace({
           <section className="absolute inset-0 min-h-0 min-w-0 overflow-hidden bg-[var(--forma-page)] pt-14" aria-label="Project workspace">
             <ProjectWorkspacePanel
               projectId={projectId}
+              title={projectTitle}
               namespaceTabs={namespaceTabs}
               activeNamespace={activeNamespace}
               onNamespaceChange={onNamespaceChange}
@@ -8288,6 +8324,7 @@ function ChatProjectArtifact({
     >
       {viewingSnapshot ? <ProjectRevisionPreview /> : <ProjectWorkspacePanel
         projectId={projectId}
+        title={history?.selection?.snapshot?.title || projectTitle}
         namespaceTabs={namespaceTabs}
         activeNamespace={activeNamespace}
         onNamespaceChange={onNamespaceChange}
@@ -8300,24 +8337,26 @@ function ChatProjectArtifact({
 
 function ProjectWorkspacePanel({
   projectId,
+  title,
   namespaceTabs,
   activeNamespace,
   onNamespaceChange,
   children,
 }: {
   projectId?: string | null;
+  title: string;
   namespaceTabs: typeof workspaceTabs;
   activeNamespace: string;
   onNamespaceChange: (value: string) => void;
   children: React.ReactNode;
 }) {
-  const namespaceName = workspaceNamespaceForTab(activeNamespace);
+  const history = useProjectHistory();
+  const sheetIndex = Math.max(0, namespaceTabs.findIndex((tab) => tab.id === activeNamespace));
+  const revision = history?.selection?.snapshot?.revision || history?.latestRevision || 1;
+  const drawingNumber = projectId ? `BB-${projectId.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()}` : "BB-0000";
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <nav
-        className="craft-folder-tabs flex min-h-[44px] min-w-0 shrink-0 items-center gap-1 overflow-x-auto border-b border-[var(--forma-border)] bg-[var(--forma-surface)] px-2"
-        aria-label="Project workspace"
-      >
+      <nav className="bb-tabs" aria-label="Project workspace">
         {namespaceTabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeNamespace === tab.id;
@@ -8326,34 +8365,58 @@ function ProjectWorkspacePanel({
               key={tab.id}
               type="button"
               onClick={() => onNamespaceChange(tab.id)}
-              className={`craft-folder-tab ${active ? "is-active" : ""} inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-medium transition-colors ${
-                active
-                  ? "bg-[rgb(var(--forma-green-rgb)/0.12)] text-[rgb(var(--forma-green-rgb))]"
-                  : "text-[var(--forma-text-muted)] hover:bg-[var(--forma-surface-muted)] hover:text-[var(--forma-text-strong)]"
-              }`}
+              className={`bb-tab ${active ? "is-active" : ""}`}
               aria-pressed={active}
               title={`${tab.label} / ${workspaceNamespaceForTab(tab.id)}`}
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+              <Icon className="bb-tab__icon" strokeWidth={1.75} />
               <span className={active ? "inline" : "hidden sm:inline"}>{tab.label}</span>
             </button>
           );
         })}
       </nav>
-      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[var(--forma-border)] bg-[var(--forma-surface)] px-3 py-1.5 font-mono text-[9px] text-[var(--forma-text-muted)]">
-        {projectId && (
-          <span className="max-w-[min(100%,14rem)] truncate" title={projectId}>
-            {projectId}
-          </span>
-        )}
-        {projectId && <span aria-hidden="true">·</span>}
-        <span className="max-w-48 truncate" title={namespaceName}>
-          {namespaceName}
+      <StaggeredTabContent tabKey={activeNamespace}>{children}</StaggeredTabContent>
+      <div className="bb-titleblock">
+        <span className="bb-titleblock__cell is-wide">
+          <span>Project</span>
+          <span className="truncate" title={title}>{title}</span>
+        </span>
+        <span className="bb-titleblock__cell">
+          <span>Dwg no.</span>
+          <span title={projectId || undefined}>{drawingNumber}</span>
+        </span>
+        <span className="bb-titleblock__cell">
+          <span>Rev</span>
+          <span>{revisionLetter(revision)}</span>
+        </span>
+        <span className="bb-titleblock__cell">
+          <span>Sheet</span>
+          <span>{sheetIndex + 1} / {namespaceTabs.length}</span>
         </span>
       </div>
     </div>
   );
+}
+
+/** Tab content staggers in on every tab change (design: 14px up, 480 ms, 60 ms apart). */
+function StaggeredTabContent({ tabKey, children }: { tabKey: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Panels wrap their sections in one or two containers; stagger the first level with siblings.
+    let level: Element = root;
+    for (let depth = 0; depth < 4 && level.children.length === 1; depth += 1) level = level.children[0];
+    Array.from(level.children).slice(0, 12).forEach((child, index) => {
+      (child as HTMLElement).animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], {
+        duration: 480,
+        delay: index * 60,
+        easing: "cubic-bezier(.2,.8,.2,1)",
+        fill: "backwards",
+      });
+    });
+  }, [tabKey]);
+  return <div ref={ref} className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>;
 }
 
 function AgentPipelineEventsDisclosure({

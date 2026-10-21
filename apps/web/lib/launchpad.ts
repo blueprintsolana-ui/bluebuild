@@ -1,6 +1,6 @@
 /**
  * Launchpad helpers: talk to the backend launch endpoints and prepare form defaults.
- * Transaction building lives in components/launch-coin-dialog.tsx so the Solana
+ * Transaction building lives in components/launch-coin-form.tsx so the Solana
  * libraries only load when someone opens the launch form.
  */
 
