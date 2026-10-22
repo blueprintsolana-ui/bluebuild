@@ -83,6 +83,7 @@ import {
 } from "./forma-workspace/admin-panels";
 import { ChatAttachmentButton, ChatAttachmentSelection, type ChatAttachmentControls } from "./forma-workspace/chat-attachments";
 import HomeChatView, { type GenerationMode } from "./forma-workspace/home-chat-view";
+import { ComposerFrame, ScopeChip } from "./forma-workspace/bb-shell";
 import ChatProjectLayout, { ChatProjectSurface } from "./forma-workspace/chat-project-layout";
 import { ProjectHistoryProvider, revisionLetter, useProjectHistory, type ProjectHistoryConfig } from "./forma-workspace/project-history";
 import ProjectRevisionPreview from "./forma-workspace/project-revision-preview";
@@ -466,9 +467,10 @@ function downloadBrowserFile(contents: string, filename: string, mimeType: strin
 }
 
 const samplePrompts = [
-  "Compact handheld device with display, controls, USB-C power, and enclosure",
-  "Environmental monitor with sensor feedback, display, and battery power",
-  "Small controller for a low-voltage actuator or relay",
+  "A 1 litre aluminium bottle that shows the water temperature and the time",
+  "A plant pot that texts me when the soil is dry",
+  "A bike light that flashes brighter when I brake",
+  "A desk cube that glows red when CO₂ gets high",
 ];
 
 function newChatMessageId() {
@@ -6314,6 +6316,7 @@ export function FormaWorkspace({
         )}
       >
         <div ref={homeChromeRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {!(homeView === "chat" && chatAccessState === "ready") && (
         <MobileWorkspaceBar onOpenSidebar={() => setMobileSidebarOpen(true)} headerAway={homeHeaderAway}>
           {homeView === "settings" ? (
             <WorkspaceChromeIdentity icon={Settings} badge="General" title="Settings" />
@@ -6349,9 +6352,10 @@ export function FormaWorkspace({
             />
           ) : null}
         </MobileWorkspaceBar>
+        )}
 	        <main className={`mx-auto w-full ${homeView === "chat" || homeView === "settings" || homeView === "about" ? "max-w-none" : "max-w-6xl"} ${
 	          homeView === "chat"
-	            ? "flex min-h-0 flex-1 flex-col overflow-hidden px-0 pb-0 pt-0 md:pt-4"
+	            ? "flex min-h-0 flex-1 flex-col overflow-hidden px-0 pb-0 pt-0"
             : "min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-16 sm:px-5 md:py-8"
         }`}>
           {homeView === "projects" ? (
@@ -6466,6 +6470,7 @@ export function FormaWorkspace({
             <ChatAccessStatus status={chatAccessState} onRetry={() => { void fetchRuntimeConfig(); }} />
           ) : (
             <HomeChatView
+              headLeading={<MobileSidebarButton onClick={() => setMobileSidebarOpen(true)} />}
               started={activeSidebarChatStarted}
               readOnly={chatReadOnly}
               authoringActive={authoringMode}
@@ -8104,7 +8109,7 @@ function ChatWorkspace({
   projectContent: React.ReactNode;
 }) {
   const { containerRef, endRef, handleScroll } = useChatAutoScroll(chatId || projectId || "project-chat", messages);
-  const { headerAway, updateFromContainer } = useChromeHeaderScroll(chatId || projectId || "project-chat");
+  const { updateFromContainer } = useChromeHeaderScroll(chatId || projectId || "project-chat");
   const chatAvailable = canChat && !readOnly;
   const hasInput = Boolean(input.trim() || attachmentControls.selectedImage || attachmentControls.selectedDocumentName);
   const retryMode = shouldOfferFailedBuildRetry({
@@ -8131,6 +8136,18 @@ function ChatWorkspace({
       onOpenTab={onNamespaceChange}
       conversationKey={chatId || projectId || "project-chat"}
       projectId={projectId}
+      heading={{
+        leading: <MobileSidebarButton onClick={onOpenSidebar} />,
+        title: (
+          <EditableWorkspaceTitle
+            value={projectTitle}
+            canEdit={chatAvailable && Boolean(onRenameTitle)}
+            label="Project chat title"
+            onCommit={(title) => onRenameTitle?.(title)}
+          />
+        ),
+        drafting: canStop,
+      }}
       project={(chatAvailable || readOnly) && projectId ? (
                 <ChatProjectArtifact
                   projectId={projectId}
@@ -8146,27 +8163,6 @@ function ChatWorkspace({
       ) : null}
     >
     <div className="craft-see-through relative flex h-full min-h-0 min-w-0 flex-col bg-[var(--forma-page)]">
-      <header className={`workspace-chrome-header absolute inset-x-0 top-0 z-20 flex min-h-14 min-w-0 items-center gap-3 px-3 pb-5 pt-2 sm:px-4 ${headerAway ? "is-away" : ""}`}>
-        <MobileSidebarButton onClick={onOpenSidebar} />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[rgb(var(--forma-green-rgb)/0.12)] px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--forma-green-rgb))]">
-              {chatAvailable ? <MessageSquare className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-              {authoringActive
-                ? "FormaAgent authoring"
-                : chatAvailable
-                  ? "Project chat"
-                  : "Project"}
-            </span>
-            <EditableWorkspaceTitle
-              value={projectTitle}
-              canEdit={chatAvailable && Boolean(onRenameTitle)}
-              label="Project chat title"
-              onCommit={(title) => onRenameTitle?.(title)}
-            />
-          </div>
-        </div>
-      </header>
 
       <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         {(chatAvailable || readOnly) && (
@@ -8174,9 +8170,9 @@ function ChatWorkspace({
             <div
               ref={containerRef}
               onScroll={onChatScroll}
-              className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-5 pt-16 sm:px-5 sm:pb-6 sm:pt-16"
+              className="bb-chat__scroll"
             >
-              <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-3">
+              <div className="bb-chat__col">
                 {readOnly && <HostedChatMaintenance compact />}
                 {authoringActive && <AuthoringModeBanner compact />}
                 <ConversationMessageList
@@ -8195,11 +8191,12 @@ function ChatWorkspace({
             </div>
 
             {chatAvailable && (
-              <form onSubmit={onSubmit} className="shrink-0 border-t border-white/5 bg-[#0f1117]/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:p-4">
-              <div className="mx-auto max-w-3xl">
+              <form onSubmit={onSubmit} className="bb-chat__form">
                 {notice && <div id="project-input-notice" role="status" className="mb-3 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">{notice.replace(/\bOpenCode\b/g, "Bluebuild Agent")}</div>}
-                <div className="w-full rounded-2xl border border-white/5 bg-[#181b22] p-3 shadow-lg transition-all focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/20">
-                  <ChatAttachmentSelection {...attachmentControls} />
+                <ComposerFrame request={messages.filter((message) => message.role === "user").length + 1} refining busy={isLoading || canStop}>
+                  <div className="bb-composer__attachments">
+                    <ChatAttachmentSelection {...attachmentControls} />
+                  </div>
                   <textarea
                     value={input}
                     onPaste={onImagePaste}
@@ -8217,16 +8214,16 @@ function ChatWorkspace({
                       }
                     }}
                     aria-label={`Describe a change to ${activeNamespaceLabel.toLowerCase()}`}
-                    placeholder={`Describe a change to ${activeNamespaceLabel.toLowerCase()}...`}
-                    className="min-h-[72px] w-full resize-none border-none bg-transparent text-sm leading-6 text-zinc-100 outline-none placeholder:text-zinc-500"
+                    placeholder={`Refine the ${activeNamespaceLabel.toLowerCase()}: “longer battery”, “add a buzzer”, “make it cheaper”…`}
+                    rows={2}
+                    className="bb-composer__input"
                   />
-                  <div className="mt-1 flex items-center justify-between gap-1.5">
-                    <ChatAttachmentButton imageInputRef={attachmentControls.imageInputRef} />
-                    <div className="flex items-center gap-1.5">
+                  <div className="bb-composer__foot">
+                    <ChatAttachmentButton imageInputRef={attachmentControls.imageInputRef} variant="chip" />
+                    <ScopeChip />
+                    <span className="bb-composer__spacer" />
                     {!canStop && !retryMode && !isLoading && hasInput && (
-                      <span className="prompt-composer-enter-hint hidden sm:inline" aria-hidden="true">
-                        Enter
-                      </span>
+                      <span className="bb-composer__hint" aria-hidden="true">ENTER ↵</span>
                     )}
                     <button
                       type={canStop || retryMode ? "button" : "submit"}
@@ -8236,26 +8233,19 @@ function ChatWorkspace({
                         else onRetryFailedBuild();
                       } : undefined}
                       disabled={retryMode ? retryingFailedBuild : !canStop && (isLoading || !projectId || !hasInput)}
-                      className={`prompt-composer-send inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed ${
-                        retryMode || (!canStop && !isLoading && hasInput) ? "is-ready" : ""
-                      }`}
+                      className={`bb-composer__send${canStop ? " is-stop" : ""}`}
                       aria-label={primaryActionLabel}
                       title={retryMode || canStop ? primaryActionLabel : `Apply change to ${activeNamespaceName} · Enter`}
                     >
                       {canStop ? (
-                        <Square className="h-3.5 w-3.5 fill-current" />
-                      ) : retryMode ? (
-                        <RefreshCw className={`h-3.5 w-3.5 ${retryingFailedBuild ? "animate-spin" : ""}`} />
-                      ) : isLoading ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
+                        <Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                      ) : retryMode || isLoading ? (
+                        <RefreshCw className={`h-3.5 w-3.5 ${isLoading || retryingFailedBuild ? "animate-spin" : ""}`} aria-hidden="true" />
+                      ) : null}
+                      {canStop ? "Stop" : retryMode ? retryLabel : isLoading ? "Revising…" : "Revise →"}
                     </button>
-                    </div>
                   </div>
-                </div>
-              </div>
+                </ComposerFrame>
               </form>
             )}
           </div>

@@ -5,8 +5,6 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowRight,
-  ArrowUpRight,
   KeyRound,
   RefreshCw,
   Settings,
@@ -21,6 +19,7 @@ import ChatProjectLayout from "./chat-project-layout";
 import type { ProjectHistoryConfig } from "./project-history";
 import { ChatAttachmentButton, ChatAttachmentSelection } from "./chat-attachments";
 import GenerationModeSelector, { type GenerationMode } from "./generation-mode-selector";
+import { ComposerFrame, EmptyDrawing, ExampleCards, ScopeChip } from "./bb-shell";
 
 export type { GenerationMode } from "./generation-mode-selector";
 
@@ -66,6 +65,8 @@ type HomeChatViewProps = {
   onImagePaste: ClipboardEventHandler<HTMLTextAreaElement>;
   readOnly: boolean;
   authoringActive?: boolean;
+  /** Shown at the start of the drawing header (mobile sidebar button). */
+  headLeading?: ReactNode;
 };
 
 export default function HomeChatView({
@@ -110,6 +111,7 @@ export default function HomeChatView({
   onImagePaste,
   readOnly,
   authoringActive = false,
+  headLeading,
 }: HomeChatViewProps) {
   const { containerRef, endRef, handleScroll } = useChatAutoScroll(conversationKey, messages);
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -132,43 +134,32 @@ export default function HomeChatView({
     if (selectedImage || selectedDocumentName) promptRef.current?.focus();
   }, [selectedImage, selectedDocumentName]);
 
+  const requestNumber = messages.filter((message) => message.role === "user").length + 1;
+  const sendLabel = generationActive
+    ? "Stop"
+    : retryMode
+      ? retryLabel
+      : isLoading
+        ? "Drafting…"
+        : started ? "Send →" : "Draw it →";
+
   return (
-    <ChatProjectLayout conversationKey={conversationKey} projectId={projectArtifactId} project={started ? projectArtifact : null} history={history}>
-    <section
-      className={`${
-        !started
-          ? "fixed bottom-[10rem] left-0 right-0 top-0 z-10 max-w-none pt-16 md:static md:inset-auto md:z-auto md:w-full md:max-w-none md:justify-center md:px-6 md:py-8 md:pt-8"
-          : "w-full max-w-none"
-      } flex min-h-0 flex-1 flex-col text-center`}
+    <ChatProjectLayout
+      conversationKey={conversationKey}
+      projectId={projectArtifactId}
+      project={started ? projectArtifact : null}
+      history={history}
+      heading={{
+        title: started && workspaceTitle ? workspaceTitle : "Untitled drawing",
+        leading: headLeading,
+        drafting: generationActive,
+      }}
     >
-      {!started && (
-        <div className="shrink-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 sm:mt-1 sm:text-3xl">
-            Turn an idea into a hardware plan.
-          </h1>
-          <p className="mx-auto mt-1.5 max-w-xl text-xs leading-relaxed text-zinc-400 sm:text-sm">
-            Upload a photo, sketch, PDF, or short description. Get parts, wiring, cost, and build steps.
-          </p>
-        </div>
-      )}
-      <div
-        className={`${
-          started
-            ? "mt-0 flex-1 overflow-hidden"
-            : "mt-4 flex-1 overflow-hidden sm:mt-5 md:mx-auto md:w-full md:max-w-2xl md:flex-none md:overflow-visible"
-        } flex min-h-0 flex-col text-left`}
-      >
-        {started && workspaceTitle ? (
-          <div className="hidden min-w-0 shrink-0 items-center px-3 pb-1 sm:px-4 md:flex">
-            {workspaceTitle}
-          </div>
-        ) : null}
-        {started && (
-          <div
-            ref={containerRef}
-            onScroll={handleScroll}
-            className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 pb-5 pt-16 sm:px-4 sm:pb-6 md:pt-5"
-          >
+    <section className={`bb-chat ${started ? "is-started" : "is-empty"}`}>
+      {!started && <EmptyDrawing />}
+      {started && (
+        <div ref={containerRef} onScroll={handleScroll} className="bb-chat__scroll">
+          <div className="bb-chat__col">
             {authoringActive && <AuthoringModeBanner compact />}
             <ConversationMessageList
               messages={messages}
@@ -182,37 +173,11 @@ export default function HomeChatView({
             />
             <div ref={endRef} />
           </div>
-        )}
+        </div>
+      )}
 
-        {!started && (
-          <div className="mt-auto shrink-0 px-3 py-3 sm:px-4 md:order-2 md:mt-4 md:px-0 md:py-0">
-            <div className="flex snap-x gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
-              {examples.map((example) => (
-                <button
-                  key={example}
-                  type="button"
-                  onClick={() => onSelectExample(example)}
-                  className="home-example-card group relative flex min-w-[240px] snap-start cursor-pointer flex-col justify-between rounded-xl border p-3.5 text-left transition-all sm:min-w-0"
-                >
-                  <span className="home-example-card-label line-clamp-3 text-xs font-medium leading-snug">
-                    {example}
-                  </span>
-                  <span className="home-example-card-icon mt-2 flex justify-end text-zinc-500" aria-hidden="true">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(!readOnly || !started) && (
-          <form
-            onSubmit={onSubmit}
-            className={started
-              ? "relative z-20 max-h-[50dvh] shrink-0 overflow-y-auto overscroll-contain border-t border-[var(--forma-border)] bg-[var(--forma-page)] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4"
-              : "fixed bottom-0 left-0 right-0 z-30 max-h-[calc(100dvh-3rem)] shrink-0 overflow-y-auto overscroll-contain bg-transparent px-3 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 sm:px-4 md:static md:order-1 md:left-auto md:right-auto md:z-20 md:max-h-none md:overflow-visible md:bg-transparent md:p-0"}
-          >
+      {(!readOnly || !started) && (
+        <form onSubmit={onSubmit} className="bb-chat__form">
           {(needsGenerationProvider || needsImageProvider) && (
             <section className="mb-3 rounded-xl border border-white/5 bg-[#181b22] p-3 text-left sm:p-4" aria-label="Bring your own key setup">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -265,19 +230,17 @@ export default function HomeChatView({
             </div>
           )}
 
-          <div
-            className={`prompt-composer w-full rounded-2xl bg-[#181b22] px-3 pb-2.5 pt-2.5 ${
-              promptRunning ? "prompt-composer-illuminate" : "prompt-composer-idle"
-            }`}
-          >
-            <ChatAttachmentSelection
-              imageInputRef={imageInputRef}
-              onImageChange={onImageChange}
-              selectedImage={selectedImage}
-              selectedDocumentName={selectedDocumentName}
-              onRemoveImage={onRemoveImage}
-              onRemoveDocument={onRemoveDocument}
-            />
+          <ComposerFrame request={requestNumber} refining={Boolean(projectArtifactId)} busy={promptRunning}>
+            <div className="bb-composer__attachments">
+              <ChatAttachmentSelection
+                imageInputRef={imageInputRef}
+                onImageChange={onImageChange}
+                selectedImage={selectedImage}
+                selectedDocumentName={selectedDocumentName}
+                onRemoveImage={onRemoveImage}
+                onRemoveDocument={onRemoveDocument}
+              />
+            </div>
             <textarea
               ref={promptRef}
               value={prompt}
@@ -299,58 +262,51 @@ export default function HomeChatView({
                   ? "Add constraints, references, or what you want from this image…"
                   : selectedDocumentName
                     ? "Tell Bluebuild what to build or what to use from this PDF…"
-                    : "Describe the product, constraints, references, and outputs you need…"
+                    : started
+                      ? "Refine it: “longer battery”, “add a reminder buzzer”, “make it cheaper”…"
+                      : "e.g. a 1 L bottle that shows the water temperature and the time"
               }
+              aria-label="Describe what you want to build"
               aria-invalid={Boolean(notice)}
               aria-describedby={notice ? "generation-input-notice" : undefined}
-              className="min-h-[64px] w-full resize-none border-none bg-transparent text-sm leading-6 text-zinc-100 outline-none placeholder:text-zinc-500 sm:min-h-[72px] sm:leading-7"
+              rows={2}
+              className="bb-composer__input"
             />
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <ChatAttachmentButton imageInputRef={imageInputRef} />
-                <GenerationModeSelector
-                  value={generationMode}
-                  onChange={onGenerationModeChange}
-                  disabled={generationActive || isLoading}
-                />
-              </div>
-              <div className="flex items-center gap-1.5">
-                {canFinishPrompt && (
-                  <span className="prompt-composer-enter-hint hidden sm:inline" aria-hidden="true">
-                    Enter
-                  </span>
-                )}
-                <button
-                  type={generationActive || retryMode ? "button" : "submit"}
-                  onClick={generationActive || retryMode ? (event) => {
-                    event.preventDefault();
-                    if (generationActive) onStop();
-                    else onRetryFailedBuild();
-                  } : undefined}
-                  disabled={retryMode ? retryingFailedBuild : !generationActive && (isLoading || !hasGenerationInput || !generationReady)}
-                  className={`prompt-composer-send flex h-7 w-7 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed ${
-                    canFinishPrompt || retryMode ? "is-ready" : ""
-                  }`}
-                  aria-label={canFinishPrompt ? `${primaryActionLabel}, or press Enter` : primaryActionLabel}
-                  title={canFinishPrompt ? `${primaryActionLabel} · Enter` : primaryActionLabel}
-                >
-                  {generationActive ? (
-                    <Square className="h-3.5 w-3.5 fill-current" />
-                  ) : retryMode ? (
-                    <RefreshCw className={`h-3.5 w-3.5 ${retryingFailedBuild ? "animate-spin" : ""}`} />
-                  ) : isLoading ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ArrowRight className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+            <div className="bb-composer__foot">
+              <ChatAttachmentButton imageInputRef={imageInputRef} variant="chip" />
+              <ScopeChip />
+              <GenerationModeSelector
+                value={generationMode}
+                onChange={onGenerationModeChange}
+                disabled={generationActive || isLoading}
+              />
+              <span className="bb-composer__spacer" />
+              {canFinishPrompt && <span className="bb-composer__hint" aria-hidden="true">ENTER ↵</span>}
+              <button
+                type={generationActive || retryMode ? "button" : "submit"}
+                onClick={generationActive || retryMode ? (event) => {
+                  event.preventDefault();
+                  if (generationActive) onStop();
+                  else onRetryFailedBuild();
+                } : undefined}
+                disabled={retryMode ? retryingFailedBuild : !generationActive && (isLoading || !hasGenerationInput || !generationReady)}
+                className={`bb-composer__send${generationActive ? " is-stop" : ""}`}
+                aria-label={canFinishPrompt ? `${primaryActionLabel}, or press Enter` : primaryActionLabel}
+                title={canFinishPrompt ? `${primaryActionLabel} · Enter` : primaryActionLabel}
+              >
+                {generationActive ? (
+                  <Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                ) : retryMode || isLoading ? (
+                  <RefreshCw className={`h-3.5 w-3.5 ${isLoading || retryingFailedBuild ? "animate-spin" : ""}`} aria-hidden="true" />
+                ) : null}
+                {sendLabel}
+              </button>
             </div>
-          </div>
+          </ComposerFrame>
+        </form>
+      )}
 
-          </form>
-        )}
-      </div>
+      {!started && <ExampleCards examples={examples} onSelect={onSelectExample} />}
     </section>
     </ChatProjectLayout>
   );

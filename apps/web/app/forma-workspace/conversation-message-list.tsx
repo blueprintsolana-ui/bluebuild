@@ -195,7 +195,8 @@ export default function ConversationMessageList({
         key={message.id}
         className={`flex min-w-0 ${isUser ? "justify-end" : "justify-start"} ${projectLayout ? "mx-auto w-full max-w-3xl" : ""}`}
       >
-        <div className={`craft-msg craft-msg--${craftKind} ${building || (showPipeline && !isUser) ? "craft-msg--build w-full" : "max-w-[92%] sm:max-w-[86%]"} min-w-0 overflow-hidden rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 ${statusTone}`}>
+        <div className={`craft-msg craft-msg--${craftKind} ${building || (showPipeline && !isUser) ? "craft-msg--build w-full" : "max-w-[92%] sm:max-w-[86%]"} min-w-0 ${isUser ? "relative mt-2 overflow-visible break-words" : "overflow-hidden"} rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 ${statusTone}`}>
+          {isUser && <span aria-hidden="true" className="craft-tape" style={{ right: 18, top: -11, width: 64, transform: "rotate(3deg)" }} />}
           <div className="craft-msg__meta mb-2 flex min-w-0 flex-wrap items-center gap-2 text-[10px] font-medium text-zinc-500">
             {building ? (
               <span className="bb-build-icon" aria-hidden="true">

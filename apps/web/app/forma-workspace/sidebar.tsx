@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import CaidLogo from "../../components/caid-logo";
+import { Wordmark } from "../../components/landing/wordmark";
 import { ConnectWalletButton } from "../../components/connect-wallet-button";
 import type { ChatActivity } from "../../lib/chat-activity";
 import { FormaUserButton, useFormaAuth } from "../../lib/forma-auth";
@@ -127,7 +128,7 @@ const STATUS_BADGE_TONE_CLASS: Record<WorkspaceStatusTone, string> = {
   error: "status-badge-error",
 };
 
-function ApiConnectionStatus({ status }: { status: WorkspaceStatusPresentation }) {
+export function ApiConnectionStatus({ status }: { status: WorkspaceStatusPresentation }) {
   return (
     <span
       className={`status-badge ${STATUS_BADGE_TONE_CLASS[status.tone]} ${
@@ -146,7 +147,7 @@ function ApiConnectionStatus({ status }: { status: WorkspaceStatusPresentation }
 
 export function WorkspaceStatusCorner({ status }: { status: WorkspaceStatusPresentation }) {
   return (
-    <div className="pointer-events-none absolute right-4 top-4 z-40 flex items-center gap-2 overflow-visible">
+    <div className="workspace-status-corner pointer-events-none absolute right-4 top-4 z-40 flex items-center gap-2 overflow-visible">
       <span className="workspace-beta-badge">
         BETA
       </span>
@@ -372,11 +373,9 @@ function ChatSidebarRow({
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const showActions = Boolean(!compact && !readOnly && !renaming && (onPin || onDelete));
-  const rowClassName = `craft-tab ${active ? "is-active" : ""} group relative flex w-full min-w-0 items-center gap-1 rounded-lg text-left text-xs font-medium transition-colors ${
-    active
-      ? "bg-emerald-500/10 text-emerald-400"
-      : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
-  } ${compact ? "justify-center px-0 py-2" : "pr-1"}`;
+  const rowClassName = `bb-side__chat ${active ? "is-active" : ""} group relative flex w-full min-w-0 items-center gap-1 text-left ${
+    compact ? "is-compact justify-center px-0 py-2" : "pr-1"
+  }`;
 
   useEffect(() => {
     if (!menuOpen) {
@@ -448,17 +447,16 @@ function ChatSidebarRow({
             {chat.pinned && (
               <Pin className={`h-3 w-3 shrink-0 ${active ? "text-emerald-400" : "text-zinc-500"}`} aria-hidden="true" />
             )}
-            <div className="truncate">{chat.title}</div>
+            <div className="bb-side__chat-title truncate">{chat.title}</div>
           </div>
         )}
-        {chat.projectCount > 1 && (
-          <div className="mt-0.5 text-[10px] text-zinc-600">{chat.projectCount} projects</div>
-        )}
+        <div className="bb-side__chat-meta">
+          {[dateLabel, chat.projectCount > 1 ? `${chat.projectCount} projects` : ""].filter(Boolean).join(" · ") || "\u00a0"}
+        </div>
       </div>
       {(waiting || activity) && (
         <ChatActivityIndicator activity={activity} waiting={waiting} active={active} compact={false} />
       )}
-      {dateLabel && <div className="shrink-0 text-[10px] text-zinc-600">{dateLabel}</div>}
     </>
   );
 
@@ -477,7 +475,7 @@ function ChatSidebarRow({
           event.stopPropagation();
           onStartRename();
         }}
-        className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-2 text-left ${compact ? "justify-center px-0" : "px-3"}`}
+        className={`flex min-w-0 flex-1 items-center gap-2.5 py-2 text-left ${compact ? "justify-center px-0" : "px-2.5"}`}
         title={activity ? `${chat.title}: ${activity.label}` : waiting ? `${chat.title} is waiting` : canRename ? `${chat.title}. Double-click to rename.` : chat.title}
         aria-label={`Open chat ${chat.title}${activity ? ` (${activity.label})` : waiting ? " (waiting)" : ""}${chat.pinned ? ", pinned" : ""}`}
       >
@@ -544,15 +542,25 @@ function ChatSidebarRow({
 
 function SidebarSectionLabel({ compact, children }: { compact: boolean; children: React.ReactNode }) {
   if (compact) return null;
-  return <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{children}</div>;
+  return <div className="bb-side__label">{children}</div>;
 }
 
 function SidebarAccountDock({ compact }: { compact: boolean }) {
   const { isSignedIn } = useFormaAuth();
+  if (compact) {
+    return (
+      <div className="mt-3 flex justify-center">
+        <AuthStatusControl authRequired compact />
+      </div>
+    );
+  }
   return (
-    <div className={`mt-3 flex items-center gap-2.5 border-t border-white/5 pt-3 ${compact ? "justify-center" : "px-3"}`}>
-      <AuthStatusControl authRequired compact={compact || isSignedIn} />
-      {!compact && isSignedIn && <span className="truncate text-xs font-medium text-zinc-500">Account</span>}
+    <div className={`bb-side__wallet${isSignedIn ? " is-connected" : ""}`}>
+      <span className="bb-side__wallet-label">{isSignedIn ? "● WALLET CONNECTED" : "NO WALLET CONNECTED"}</span>
+      <div className="bb-side__wallet-action">
+        <AuthStatusControl authRequired compact={isSignedIn} />
+        {isSignedIn && <span>Account</span>}
+      </div>
     </div>
   );
 }
@@ -574,9 +582,7 @@ function SidebarNavLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-800/40 hover:text-zinc-200 ${
-        compact ? "justify-center px-0" : ""
-      }`}
+      className={`bb-side__link ${compact ? "is-compact" : ""}`}
       title={label}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -650,8 +656,8 @@ export function ChatSidebar({
     <aside
       className={
         isDrawer
-          ? "flex h-full min-h-0 w-[min(320px,calc(100vw-2rem))] flex-col overflow-hidden rounded-r-2xl border-r border-white/5 bg-[#181b22] text-zinc-100 shadow-2xl shadow-black/50"
-          : "hidden h-full min-h-0 flex-col border-r border-white/5 bg-[#181b22] text-zinc-100 md:flex"
+          ? `bb-side is-drawer flex h-full min-h-0 w-[min(320px,calc(100vw-2rem))] flex-col overflow-hidden shadow-2xl shadow-black/50`
+          : `bb-side ${compact ? "is-compact" : ""} hidden h-full min-h-0 flex-col md:flex`
       }
     >
       <div className="flex min-h-0 flex-1 flex-col">
@@ -662,15 +668,13 @@ export function ChatSidebar({
               onHome();
               onNavigate?.();
             }}
-            className="inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-lg text-zinc-200 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
-            aria-label="Home"
+            className={`bb-side__home inline-flex h-9 shrink-0 items-center justify-center ${compact ? "w-11" : "px-1"}`}
+            aria-label="Bluebuild home"
             title="Home"
           >
-            <CaidLogo className="h-6 w-9" sizes="36px" />
+            {compact ? <CaidLogo className="h-6 w-9" sizes="36px" /> : <Wordmark height={22} />}
           </button>
-          {!compact && (
-            <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-zinc-100">Bluebuild</span>
-          )}
+          {!compact && <span className="bb-side__beta">BETA</span>}
           <button
             type="button"
             onClick={isDrawer ? onClose : onToggle}
@@ -690,15 +694,11 @@ export function ChatSidebar({
               if (!newChatDisabled) onNavigate?.();
             }}
             disabled={newChatDisabled}
-            className={`flex h-9 w-full items-center justify-center gap-2 rounded-lg text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-              newChatDisabled
-                ? "cursor-not-allowed bg-zinc-800/40 text-zinc-600"
-                : "craft-key craft-key--primary min-h-9"
-            } ${compact ? "px-0" : "px-3"}`}
+            className={`bb-side__new ${compact ? "is-compact" : ""}`}
             aria-label="New chat"
             title={newChatDisabled ? newChatDisabledReason || "Send a message before starting another chat" : "New chat"}
           >
-            <Plus className="h-4 w-4 shrink-0" />
+            <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
             {!compact && <span className="truncate">New chat</span>}
           </button>
         </div>
@@ -767,7 +767,7 @@ export function ChatSidebar({
         </div>
       </div>
 
-      <div className="border-t border-white/5 px-3 py-3">
+      <div className="bb-side__foot px-3 py-3">
         <SidebarSectionLabel compact={compact}>Workspace</SidebarSectionLabel>
         <div className="space-y-0.5">
           <SidebarNavLink href="/my-projects" icon={Database} label="My projects" compact={compact} onNavigate={onNavigate} />

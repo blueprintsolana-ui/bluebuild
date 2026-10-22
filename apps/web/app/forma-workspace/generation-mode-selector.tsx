@@ -14,7 +14,7 @@ export default function GenerationModeSelector({
   disabled = false,
 }: GenerationModeSelectorProps) {
   return (
-    <label className="inline-flex min-w-0 items-center rounded-md border border-white/5 bg-zinc-900/60 px-1.5 text-[11px] text-zinc-400">
+    <label className="bb-mode inline-flex min-w-0 items-center rounded-md border border-white/5 bg-zinc-900/60 px-1.5 text-[11px] text-zinc-400">
       <span className="sr-only">Generation mode</span>
       <select
         value={value}

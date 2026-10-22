@@ -66,7 +66,20 @@ export function ChatAttachmentSelection({
   </>;
 }
 
-export function ChatAttachmentButton({ imageInputRef }: Pick<ChatAttachmentControls, "imageInputRef">) {
+export function ChatAttachmentButton({ imageInputRef, variant = "icon" }: Pick<ChatAttachmentControls, "imageInputRef"> & { variant?: "icon" | "chip" }) {
+  if (variant === "chip") {
+    return (
+      <button
+        type="button"
+        onClick={() => imageInputRef.current?.click()}
+        className="bb-composer__chip"
+        aria-label="Attach image or PDF"
+        title="Attach a sketch, photo or PDF, or paste an image from your clipboard"
+      >
+        + SKETCH
+      </button>
+    );
+  }
   return (
     <button
       type="button"

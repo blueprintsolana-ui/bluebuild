@@ -46,3 +46,8 @@ tmp/
 *.sln
 *.swp
 .vercel
+
+# Design handoff packs (local reference only, not part of the site)
+design-handoff/
+design-handoff.zip
+design_handoff_bluebuild_redesign/

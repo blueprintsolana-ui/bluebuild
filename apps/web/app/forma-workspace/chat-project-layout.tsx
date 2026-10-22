@@ -11,6 +11,7 @@ import {
   linkedProjectPath, projectPaneVisible, type ProjectMessageReference,
 } from "../../lib/chat-project-layout";
 import styles from "./chat-project-layout.module.css";
+import { WorkspaceHead, type WorkspaceHeading } from "./bb-shell";
 import { revisionId } from "../../lib/project-history";
 import {
   ProjectHistoryProvider, ProjectHistoryButton, ProjectHistoryBody, ProjectVersionLabel, useProjectHistory,
@@ -37,6 +38,8 @@ type ChatProjectLayoutProps = {
   history?: ProjectHistoryConfig;
   /** Switch the project pane's tab; ChatProjectLayout opens the pane itself. */
   onOpenTab?: (tab: string) => void;
+  /** Drawing header across the top (title, status, Project toggle). */
+  heading?: WorkspaceHeading;
 };
 
 /** One session owns one viewer slot. Changing chats releases the previous subtree. */
@@ -46,7 +49,7 @@ export default function ChatProjectLayout(props: ChatProjectLayoutProps) {
   </ProjectHistoryProvider>;
 }
 
-function ChatProjectLayoutSession({ conversationKey, projectId = null, project, children, onOpenTab }: ChatProjectLayoutProps) {
+function ChatProjectLayoutSession({ conversationKey, projectId = null, project, children, onOpenTab, heading }: ChatProjectLayoutProps) {
   const [state, setState] = useState(initialChatProjectLayout);
   const [wide, setWide] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -154,7 +157,17 @@ function ChatProjectLayoutSession({ conversationKey, projectId = null, project, 
   return (
     <ProjectWorkspace.Provider value={context}>
       <div ref={frameRef} className={`${styles.frame} craft-see-through`} data-testid="chat-project-layout" data-layout={split ? "split" : visible ? "project" : "chat"}>
-        {hasProject && (
+        {heading && !fullScreen && (
+          <WorkspaceHead
+            heading={heading}
+            projectId={projectId}
+            hasProject={hasProject}
+            projectOpen={visible}
+            onToggleProject={visible ? closeProject : openProject}
+            projectButtonRef={openButtonRef}
+          />
+        )}
+        {!heading && hasProject && (
           <div className={styles.toolbar} role="group" aria-label="Workspace view" hidden={fullScreen}>
             <button type="button" className={styles.button} onClick={closeProject} aria-pressed={!visible} aria-controls={chatDomId}>
               <MessageSquare className={styles.icon} /> {wide ? "Chat only" : "Chat"}

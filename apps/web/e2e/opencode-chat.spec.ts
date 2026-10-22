@@ -185,7 +185,7 @@ for (const scenario of ["concurrent chats", "stop during session creation"] as c
 
     try {
       await page.goto("/", { waitUntil: "domcontentloaded", timeout: 120_000 });
-      const composer = page.getByPlaceholder("Describe the product, constraints, references, and outputs you need…", { exact: true });
+      const composer = page.getByRole("textbox", { name: "Describe what you want to build", exact: true });
       const stop = page.getByRole("button", { name: "Stop generation", exact: true });
       const newChat = page.getByRole("button", { name: "New chat", exact: true });
       await expect(composer).toBeVisible();
@@ -355,7 +355,7 @@ for (const accessResult of ["enabled", "disabled", "failed"] as const) {
       await page.goto("/", { waitUntil: "domcontentloaded", timeout: 120_000 });
       const loading = page.getByRole("status").filter({ hasText: "Loading chat…" });
       const maintenance = page.getByRole("status", { name: "Hosted chat maintenance" });
-      const composer = page.getByPlaceholder("Describe the product, constraints, references, and outputs you need…", { exact: true });
+      const composer = page.getByRole("textbox", { name: "Describe what you want to build", exact: true });
       await expect(loading).toBeVisible();
       await expect.poll(() => configRequests).toBe(1);
       await expect(maintenance).toHaveCount(0);
@@ -596,7 +596,7 @@ for (const resultMode of ["unpublished", "published", "draft", "wired", "forbidd
       await page.goto("/", { waitUntil: "domcontentloaded", timeout: 120_000 });
     }
 
-    const composer = page.getByPlaceholder("Describe the product, constraints, references, and outputs you need\u2026", { exact: true });
+    const composer = page.getByRole("textbox", { name: "Describe what you want to build", exact: true });
     const followUpComposer = projectPublished ? page.getByRole("textbox", { name: /Describe a change to/ }) : composer;
     const stop = page.getByRole("button", { name: "Stop generation", exact: true });
     const missingProject = page.getByText(/no longer available in (?:the )?project database/i);
@@ -879,7 +879,7 @@ for (const outcome of ["retry", "cancel", "reconnect"] as const) {
       return route.fulfill({ status: 501, json: { detail: "Unmocked endpoint" } });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const composer = page.getByPlaceholder("Describe the product, constraints, references, and outputs you need…", { exact: true });
+    const composer = page.getByRole("textbox", { name: "Describe what you want to build", exact: true });
     const stop = page.getByRole("button", { name: "Stop generation", exact: true });
     await composer.fill("Build a printable hinge");
     await composer.press("Enter");
@@ -991,7 +991,7 @@ for (const mode of ["http", "malformed", "hung", "transient", "cancel", "reload"
       return route.fulfill({ status: 501, json: { detail: "Unmocked endpoint" } });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const composer = page.getByPlaceholder("Describe the product, constraints, references, and outputs you need…", { exact: true });
+    const composer = page.getByRole("textbox", { name: "Describe what you want to build", exact: true });
     const stop = page.getByRole("button", { name: "Stop generation", exact: true });
     const check = page.getByRole("button", { name: "Check request status", exact: true });
     await composer.fill("Build a printable hinge");

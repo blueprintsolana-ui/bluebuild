@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { LivingGrid, PaperGrain } from "../../components/craft";
 import { WorkspaceStatusCorner } from "./sidebar";
+import { WorkspaceStatusContext } from "./bb-shell";
 import type { WorkspaceStatusPresentation } from "../../lib/connection-status";
 
 type WorkspaceFrameProps = {
@@ -47,7 +48,7 @@ export default function WorkspaceFrame({
               : "grid h-full min-h-0 min-w-0 grid-cols-1 overflow-hidden"
           }
         >
-          {children}
+          <WorkspaceStatusContext.Provider value={workspaceStatus}>{children}</WorkspaceStatusContext.Provider>
         </div>
       </div>
     </div>
