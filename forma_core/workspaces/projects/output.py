@@ -383,6 +383,17 @@ def _resume_auto_approved_cad(ir: Any) -> None:
         logger.exception("Deferred optional CAD generation failed after visual approval.")
 
 
+def _model_reference_views(ir: Any) -> list[Any]:
+    """Drawings of the saved 3D product model, used as the reference for every render."""
+    try:
+        from forma_core.model_render import render_model_views
+
+        return render_model_views(ir)
+    except Exception:
+        logger.exception("Could not draw the 3D product model; renders fall back to the text description.")
+        return []
+
+
 def attach_product_image(
     prompt_text: str,
     ir: Any,
@@ -498,8 +509,13 @@ def attach_product_image(
             },
         )
 
+    from_model = getattr(image_provider, "generate_images_from_model_views", None)
+    model_views = _model_reference_views(ir) if callable(from_model) else []
     try:
-        generated_images = image_provider.generate_project_image_sequence(prompt_text, ir)
+        if model_views:
+            generated_images = from_model(prompt_text, ir, model_views)
+        else:
+            generated_images = image_provider.generate_project_image_sequence(prompt_text, ir)
     except Exception as exc:
         logger.exception("Image generation failed: %s", exc)
         error = str(exc)[:500]
@@ -544,6 +560,8 @@ def attach_product_image(
         "image_output_generated_count": len(generated_images),
         "product_image_error": None,
         "product_visual_sequence_count": len(generated_images),
+        # "3d_model": every render was drawn from the saved 3D product model first.
+        "product_visual_source": "3d_model" if model_views else "text",
     }
     sequence: list[Dict[str, Any]] = []
     system_render_representation = None

@@ -11,7 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from dotenv import load_dotenv
 
@@ -207,6 +207,43 @@ class ImageProvider:
     def generate_project_image_sequence(self, user_prompt: str, ir: Any) -> List[GeneratedImage]:
         image = self.generate_project_image(user_prompt, ir)
         return [image] if image else []
+
+    def generate_images_from_model_views(self, user_prompt: str, ir: Any, views: Sequence[Any]) -> List[GeneratedImage]:
+        """Turn drawings of the project's 3D model into product renders, one per view.
+
+        Each drawing goes to the image model as the reference picture, with instructions to
+        keep every part where it is. If the provider cannot edit images, or an edit fails,
+        the plain drawing of the 3D model is used for that view, so the renders never show a
+        different product from the 3D model.
+        """
+        editor = getattr(self, "_edit_image_from_prompt", None)
+        results: List[GeneratedImage] = []
+        for view in views:
+            drawing = GeneratedImage(
+                data_url=view.data_url,
+                provider="bluebuild",
+                model="3d-model-drawing",
+                size="1024x1024",
+                prompt="",
+                output_format="png",
+                view_id=view.view_id,
+                label=view.label,
+                reference_view_id=None,
+            )
+            image: Optional[GeneratedImage] = None
+            if self.is_configured and callable(editor):
+                try:
+                    image = editor(
+                        build_model_view_prompt(user_prompt, ir, view.view_id),
+                        drawing,
+                        view_id=view.view_id,
+                        label=view.label,
+                        reference_view_id=f"3d_model_{view.view_id}",
+                    )
+                except Exception as exc:
+                    logger.warning("Restyling the 3D model drawing for %s failed; using the drawing: %s", view.view_id, exc)
+            results.append(image or drawing)
+        return results
 
     def generate_test_image(self, prompt: str) -> GeneratedImage:
         """Generate one image directly, without running the project or agent pipeline."""
@@ -1476,6 +1513,51 @@ def product_model_shape_brief(ir: Any, limit: int = 14) -> Optional[str]:
             f"{height:g} mm above the base, {part.get('finish') or 'matte'} {part.get('color_hex') or ''} ({role})"
         )
     return "; ".join(lines) or None
+
+
+MODEL_VIEW_INSTRUCTIONS: Dict[str, str] = {
+    "case": (
+        "The reference image is a plain grey drawing of this product's exact 3D model, seen from the front three-quarter angle. "
+        "Turn it into a photorealistic studio product photo of the same object from the same camera angle."
+    ),
+    "rear": (
+        "The reference image is a plain drawing of this product's exact 3D model, seen from the rear three-quarter angle. "
+        "Turn it into a photorealistic studio product photo of the same object from the same camera angle."
+    ),
+    "inside": (
+        "The reference image is an X-ray drawing of this product's exact 3D model: the faint outline is the outer shell and "
+        "the solid coloured blocks are the internal parts in their real positions. Turn it into a photorealistic cut-away "
+        "product illustration from the same camera angle: remove a clean section of the shell nearest the camera so the "
+        "internal parts show exactly where the drawing places them, at the same sizes."
+    ),
+}
+
+
+def build_model_view_prompt(user_prompt: str, ir: Any, view_id: str) -> str:
+    """Prompt for restyling one drawing of the saved 3D model into a product render."""
+    overview = getattr(ir, "overview", None)
+    mechanical = getattr(ir, "mechanical", None)
+    title = getattr(overview, "title", "") or "Hardware product"
+    description = getattr(overview, "description", "") or user_prompt
+    physical_form = getattr(mechanical, "physical_form", "") if mechanical else ""
+    lines = [
+        MODEL_VIEW_INSTRUCTIONS.get(view_id, MODEL_VIEW_INSTRUCTIONS["case"]),
+        "The drawing is authoritative. Keep the camera angle, framing, silhouette, proportions, and every part's shape, "
+        "position, size, orientation, and colour exactly as drawn. Do not add, remove, move, merge, or resize any part, "
+        "and do not change the overall shape (for example, do not turn a cylinder into a box).",
+        "You may only add realistic materials, surface finish, subtle seams and fillets, soft studio lighting, and a clean "
+        "neutral background. Flat coloured blocks become the real parts they represent (a dark rectangle on the surface is "
+        "the display, a green board is a circuit board).",
+        "The image must contain no text: no labels, dimension lines, numbers, annotations, logos, or watermarks. "
+        "No hands or people.",
+        f"Product: {_truncate(title, 120)}. {_truncate(description, 600)}",
+    ]
+    if physical_form and str(physical_form).strip().lower() != "unspecified":
+        lines.append(f"Physical form: {_truncate(str(physical_form), 300)}")
+    shape_brief = product_model_shape_brief(ir)
+    if shape_brief:
+        lines.append(f"Parts in the drawing (for identification only, never as text): {shape_brief}")
+    return "\n".join(lines)
 
 
 def build_project_image_prompt(user_prompt: str, ir: Any) -> str:
