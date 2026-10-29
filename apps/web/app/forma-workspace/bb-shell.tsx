@@ -6,6 +6,7 @@ import { ArrowUpRight, Layers } from "lucide-react";
 
 import { ConnectWalletButton } from "../../components/connect-wallet-button";
 import type { WorkspaceStatusPresentation } from "../../lib/connection-status";
+import { drawingNumber } from "../../lib/community";
 import { revisionLetter, useProjectHistory } from "./project-history";
 import { ApiConnectionStatus } from "./sidebar";
 
@@ -13,6 +14,8 @@ import { ApiConnectionStatus } from "./sidebar";
  * Pieces of the redesigned app shell (design_handoff_bluebuild_redesign/Bluebuild App.dc.html):
  * the drawing header, the bracketed composer and the empty "What do you want to build?" state.
  */
+
+export { drawingNumber };
 
 export type DrawingStatus = "idle" | "drafting" | "ready";
 
@@ -26,10 +29,6 @@ export type WorkspaceHeading = {
 /** Backend connection status, provided by WorkspaceFrame so the header can show its dot. */
 export const WorkspaceStatusContext = createContext<WorkspaceStatusPresentation | null>(null);
 
-/** "BB-" plus the first four characters of the project id, the same number the panel title block shows. */
-export function drawingNumber(projectId: string | null | undefined) {
-  return projectId ? `BB-${projectId.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()}` : null;
-}
 
 export function WorkspaceHead({
   heading,

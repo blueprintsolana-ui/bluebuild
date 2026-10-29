@@ -113,6 +113,7 @@ import {
 } from "./forma-workspace/project-gallery";
 import CadModelPanel from "./forma-workspace/cad-model-panel";
 import ProjectExportsPanel from "./forma-workspace/project-exports-panel";
+import CommunityView from "../components/community/community-view";
 import { projectCadModel, resolveCadModel } from "../lib/cad-model";
 import { FormaProjectBrowser, type FormaProjectSummary } from "@isayahc/forma-gui";
 import {
@@ -6316,14 +6317,12 @@ export function FormaWorkspace({
         )}
       >
         <div ref={homeChromeRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {!(homeView === "chat" && chatAccessState === "ready") && (
+        {!(homeView === "chat" && chatAccessState === "ready") && homeView !== "projects" && (
         <MobileWorkspaceBar onOpenSidebar={() => setMobileSidebarOpen(true)} headerAway={homeHeaderAway}>
           {homeView === "settings" ? (
             <WorkspaceChromeIdentity icon={Settings} badge="General" title="Settings" />
           ) : homeView === "about" ? (
             <WorkspaceChromeIdentity icon={Handshake} badge="General" title="About" />
-          ) : homeView === "projects" ? (
-            <WorkspaceChromeIdentity icon={Layers} badge="Workspace" title="Community" />
           ) : homeView === "my-projects" ? (
             <WorkspaceChromeIdentity icon={Database} badge="Workspace" title="My projects" />
           ) : homeView === "jobs" ? (
@@ -6353,34 +6352,35 @@ export function FormaWorkspace({
           ) : null}
         </MobileWorkspaceBar>
         )}
-	        <main className={`mx-auto w-full ${homeView === "chat" || homeView === "settings" || homeView === "about" ? "max-w-none" : "max-w-6xl"} ${
-	          homeView === "chat"
+	        <main className={`mx-auto w-full ${homeView === "chat" || homeView === "projects" || homeView === "settings" || homeView === "about" ? "max-w-none" : "max-w-6xl"} ${
+	          homeView === "chat" || homeView === "projects"
 	            ? "flex min-h-0 flex-1 flex-col overflow-hidden px-0 pb-0 pt-0"
             : "min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-16 sm:px-5 md:py-8"
         }`}>
           {homeView === "projects" ? (
-              <FormaProjectBrowser
-                sectionRef={projectsSectionRef}
-                projects={projectBrowserItems}
-                title="Community"
-                pageSize={PROJECT_GALLERY_PAGE_SIZE}
-                loading={projectsPageLoading}
+              <CommunityView
+                apiUrl={API_URL}
+                getHeaders={optionalAuthHeaders}
+                canSave={canInteractWithGallery}
+                leading={<MobileSidebarButton onClick={() => setMobileSidebarOpen(true)} />}
                 onOpenProject={(projectId) => router.push(projectRoute(projectId))}
-                onToggleSave={canInteractWithGallery ? (project) => {
-                  const item = projectGalleryItems.find((candidate) => candidate.projectId === project.project_id);
-                  return item ? handleToggleProjectSave(item) : undefined;
-                } : undefined}
-                onRemixProject={canInteractWithGallery && hostedChatEnabled ? (project) => {
-                  const item = projectGalleryItems.find((candidate) => candidate.projectId === project.project_id);
-                  return item ? handleRemixProject(item) : undefined;
-                } : undefined}
-                onVisibleProjectIdsChange={handleVisibleProjectGalleryIdsChange}
-                totalItems={visibleProjectTotal}
-                error={hasCurrentGalleryPage && !visibleProjectHistory.length ? projectHistoryError : null}
-                currentPage={projectHistoryPage}
-                onPageChange={handleProjectHistoryPageChange}
-                searchValue={projectSearchInput}
-                onSearchValueChange={setProjectSearchInput}
+                onDrawYourOwn={startNewProjectChat}
+                onRemix={canInteractWithGallery && hostedChatEnabled ? (project) => handleRemixProject({
+                  key: project.project_id,
+                  title: project.title,
+                  projectId: project.project_id,
+                  chatId: "",
+                  canChat: false,
+                  creatorDisplay: String(project.creator_display || ""),
+                  creatorImageUrl: null,
+                  createdAt: project.created_at || null,
+                  partsCount: project.parts_count || 0,
+                  saveCount: project.save_count || 0,
+                  remixCount: project.remix_count || 0,
+                  saved: Boolean(project.saved),
+                  image: null,
+                  imageLoading: false,
+                }) : undefined}
               />
 	          ) : homeView === "my-projects" ? (
               <FormaProjectBrowser

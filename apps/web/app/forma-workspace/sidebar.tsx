@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   Clock3,
@@ -578,11 +579,14 @@ function SidebarNavLink({
   compact: boolean;
   onNavigate?: () => void;
 }) {
+  const pathname = usePathname();
+  const active = pathname === href || pathname?.startsWith(`${href}/`);
   return (
     <Link
       href={href}
       onClick={onNavigate}
-      className={`bb-side__link ${compact ? "is-compact" : ""}`}
+      className={`bb-side__link ${compact ? "is-compact" : ""} ${active ? "is-active" : ""}`}
+      aria-current={active ? "page" : undefined}
       title={label}
     >
       <Icon className="h-4 w-4 shrink-0" />

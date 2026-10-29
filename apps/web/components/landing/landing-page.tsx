@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { HowItWorks } from "./landing-how";
+import { CommunityTurntable } from "./landing-community";
 import { LandingHero } from "./landing-hero";
 import { LandingMotion, clamp, pad4, useLandingFrame } from "./landing-motion";
 import { OutputPad } from "./landing-output";
@@ -22,6 +23,7 @@ export default function LandingPage() {
           <LandingHero />
           <HowItWorks />
           <OutputPad />
+          <CommunityTurntable />
           <LaunchpadSection />
           <DocsSection />
           <TokenSection />
@@ -54,6 +56,7 @@ function LandingNav() {
       <div className="lp-nav__links">
         <a href="#how">How it works</a>
         <a href="#output">Output</a>
+        <a href="#community">Community</a>
         <a href="#launch">Launchpad</a>
         <a href="#docs">Docs</a>
         <a href="#token">Token</a>

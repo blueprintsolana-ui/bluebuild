@@ -338,6 +338,12 @@ class _SupabaseLaunchStore:
             .order("created_at", desc=True).limit(20).execute().data or []
         )
 
+    def launched_for_projects(self, project_ids: List[str]) -> List[Dict[str, Any]]:
+        return (
+            self.client.table("bluebuild_coin_launches").select("*").in_("project_id", project_ids)
+            .eq("status", "launched").order("created_at", desc=True).limit(200).execute().data or []
+        )
+
     def count_since(self, owner_user_id: str, since: str, status_value: Optional[str] = None) -> int:
         query = (
             self.client.table("bluebuild_coin_launches").select("id", count="exact")
@@ -429,6 +435,16 @@ class _SQLiteLaunchStore:
             ).fetchall()
         return [self._row(row) for row in rows]
 
+    def launched_for_projects(self, project_ids: List[str]) -> List[Dict[str, Any]]:
+        marks = ",".join("?" for _ in project_ids)
+        with self._connect() as db:
+            rows = db.execute(
+                f"select * from bluebuild_coin_launches where status='launched' and project_id in ({marks}) "
+                "order by created_at desc limit 200",
+                tuple(project_ids),
+            ).fetchall()
+        return [self._row(row) for row in rows]
+
     def count_since(self, owner_user_id: str, since: str, status_value: Optional[str] = None) -> int:
         query = "select count(*) from bluebuild_coin_launches where owner_user_id=? and created_at>=?"
         params: List[Any] = [owner_user_id, since]
@@ -472,6 +488,31 @@ def store() -> Any:
                     _env("BLUEBUILD_LAUNCHPAD_PUBLIC_BASE", "http://localhost:8000") or "http://localhost:8000",
                 )
         return _STORE
+
+
+def launched_coins_for_projects(project_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    """The visible launched coin for each project (newest wins), for gallery cards. {} when off."""
+    ids = [project_id for project_id in dict.fromkeys(project_ids) if project_id]
+    if not ids or not launchpad_enabled():
+        return {}
+    try:
+        records = store().launched_for_projects(ids)
+    except Exception:
+        logger.exception("Launchpad lookup for %s gallery projects failed", len(ids))
+        return {}
+    coins: Dict[str, Dict[str, Any]] = {}
+    for record in records:
+        project_id = str(record.get("project_id") or "")
+        if project_id in coins or record.get("hidden"):
+            continue
+        coins[project_id] = {
+            "name": record.get("name"),
+            "symbol": record.get("symbol"),
+            "mint": record.get("mint"),
+            "pump_url": f"https://pump.fun/coin/{record['mint']}",
+            "product_page_path": f"/coin/{record['mint']}",
+        }
+    return coins
 
 
 # ---------------------------------------------------------------- endpoints

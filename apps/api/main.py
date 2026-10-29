@@ -194,7 +194,7 @@ from apps.api.auth import (
     require_user_context,
 )
 from apps.api.security import SecurityLimitsMiddleware, cors_origins, security_config
-from apps.api.bluebuild_launchpad import router as launchpad_router
+from apps.api.bluebuild_launchpad import launched_coins_for_projects, router as launchpad_router
 from forma_core.safe_images import UnsafeImageError, sanitize_inline_image
 from apps.api.bluebuild_tiers import BluebuildQuotaMiddleware, router as bluebuild_router
 from apps.api.project_deletion import (
@@ -1975,6 +1975,12 @@ def _project_summary_response(
         and stored_creator_image_url.strip().startswith(("http://", "https://"))
         else None
     )
+    overview = hardware_ir.get("overview") if isinstance(hardware_ir.get("overview"), dict) else {}
+    requirements = hardware_ir.get("requirements") if isinstance(hardware_ir.get("requirements"), dict) else {}
+    category = str(overview.get("category") or "").strip()[:60] or None
+    description = str(overview.get("description") or "").strip()[:600]
+    estimated_cost = overview.get("estimated_cost")
+    operating_voltage = requirements.get("operating_voltage")
     return ProjectSummary(
         project_id=project.project_id,
         creation_channel=getattr(project, "creation_channel", "hosted"),
@@ -1988,6 +1994,12 @@ def _project_summary_response(
         creator_username=creator_display,
         creator_image_url=creator_image_url,
         parts_count=len(components) if isinstance(components, list) else 0,
+        category=category,
+        description=description,
+        estimated_cost_usd=round(float(estimated_cost), 2)
+        if isinstance(estimated_cost, (int, float)) and estimated_cost > 0 else None,
+        operating_voltage=float(operating_voltage)
+        if isinstance(operating_voltage, (int, float)) and operating_voltage > 0 else None,
         save_count=0,
         remix_count=0,
         saved=False,
@@ -2259,6 +2271,7 @@ def _with_project_engagement(
         return records
     project_ids = [str(record.get("project_id") or "") for record in records]
     engagement = project_engagement_for_ids(project_ids, current_user_id)
+    coins = launched_coins_for_projects(project_ids)
     enriched: List[Dict[str, Any]] = []
     for record in records:
         project_id = str(record.get("project_id") or "")
@@ -2269,6 +2282,7 @@ def _with_project_engagement(
                 "save_count": max(0, int(stats.get("save_count") or 0)),
                 "remix_count": max(0, int(stats.get("remix_count") or 0)),
                 "saved": bool(stats.get("saved")),
+                "coin": coins.get(project_id),
             }
         )
     return enriched
@@ -2460,6 +2474,91 @@ def list_projects_endpoint(
             _personalize_public_project_records(cache_records, user.owner_user_id),
             user.owner_user_id,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+COMMUNITY_SORTS = {"trending", "newest", "remixed"}
+
+
+def _public_gallery_records() -> List[Dict[str, Any]]:
+    """Every public gallery record (cache-backed), in the gallery's default order."""
+    cached, generation = get_cached_project_list("public", None)
+    if cached is not None:
+        return list(cached)
+    projects = list_project_gallery_inventory(visibility="public")
+    records = jsonable_encoder(
+        [record for project in projects if (record := _gallery_inventory_cache_record(project)) is not None]
+    )
+    _log_gallery_legacy_fallback("public", projects)
+    cache_project_list("public", None, records, generation)
+    return records
+
+
+def _community_text(record: Dict[str, Any]) -> str:
+    return " ".join(
+        str(record.get(key) or "")
+        for key in ("title", "description", "prompt", "category", "creator_display", "creator_username")
+    ).lower()
+
+
+@app.get("/community/projects")
+def list_community_projects_endpoint(
+    user: UserContext = Depends(optional_user_context),
+    limit: int = 9,
+    offset: int = 0,
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    sort: str = "trending",
+    coin: bool = False,
+):
+    """Community browse: public projects filtered by search, category and launched coin, then sorted."""
+    try:
+        limit = max(1, min(int(limit), 30))
+        offset = max(0, int(offset))
+        sort = sort if sort in COMMUNITY_SORTS else "trending"
+        records = _public_gallery_records()
+        project_ids = [str(record.get("project_id") or "") for record in records]
+        # Remix counts are only needed to sort by them; the page itself is enriched below.
+        engagement = project_engagement_for_ids(project_ids, None) if sort == "remixed" else {}
+        coins = launched_coins_for_projects(project_ids)
+
+        categories: Dict[str, int] = {}
+        for record in records:
+            name = str(record.get("category") or "").strip()
+            if name:
+                categories[name] = categories.get(name, 0) + 1
+
+        query = (q or "").strip().lower()
+        wanted = (category or "").strip().lower()
+        matches = [
+            record
+            for record in records
+            if (not query or query in _community_text(record))
+            and (not wanted or str(record.get("category") or "").strip().lower() == wanted)
+            and (not coin or str(record.get("project_id") or "") in coins)
+        ]
+        if sort == "newest":
+            matches.sort(key=lambda record: str(record.get("updated_at") or record.get("created_at") or ""), reverse=True)
+        elif sort == "remixed":
+            matches.sort(
+                key=lambda record: int((engagement.get(str(record.get("project_id") or ""), {}) or {}).get("remix_count") or 0),
+                reverse=True,
+            )
+        page = matches[offset:offset + limit]
+        items = _with_project_engagement(_personalize_public_project_records(page, user.owner_user_id), user.owner_user_id)
+        return {
+            "items": items,
+            "total": len(matches),
+            "all_total": len(records),
+            "categories": [
+                {"name": name, "count": count}
+                for name, count in sorted(categories.items(), key=lambda pair: (-pair[1], pair[0].lower()))
+            ],
+            "limit": limit,
+            "offset": offset,
+            "has_more": offset + len(page) < len(matches),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

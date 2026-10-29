@@ -731,6 +731,11 @@ class ProjectSummary(BaseModel):
     creator_username: str | None = None
     creator_image_url: str | None = None
     parts_count: int = 0
+    # Community browse facts, read from the design's overview and requirements.
+    category: str | None = None
+    description: str = ""
+    estimated_cost_usd: float | None = None
+    operating_voltage: float | None = None
     save_count: int = 0
     remix_count: int = 0
     saved: bool = False
