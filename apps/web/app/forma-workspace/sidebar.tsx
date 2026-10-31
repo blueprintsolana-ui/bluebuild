@@ -666,18 +666,14 @@ export function ChatSidebar({
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className={`flex shrink-0 items-center ${compact ? "h-auto flex-col justify-center gap-2 px-0 py-3" : "h-14 gap-2 px-3"}`}>
-          <button
-            type="button"
-            onClick={() => {
-              onHome();
-              onNavigate?.();
-            }}
+          <Link
+            href="/"
             className={`bb-side__home inline-flex h-9 shrink-0 items-center justify-center ${compact ? "w-11" : "px-1"}`}
-            aria-label="Bluebuild home"
-            title="Home"
+            aria-label="Bluebuild home page"
+            title="Home page"
           >
             {compact ? <CaidLogo className="h-6 w-9" sizes="36px" /> : <Wordmark height={22} />}
-          </button>
+          </Link>
           {!compact && <span className="bb-side__beta">BETA</span>}
           <button
             type="button"
