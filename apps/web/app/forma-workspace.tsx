@@ -2973,15 +2973,39 @@ export function FormaWorkspace({
     const requestId = ++generationLlmRequestIdRef.current;
     const requestIsCurrent = () => generationLlmRequestIdRef.current === requestId;
     setRuntimeConfigState({ identityKey: authIdentityKey, status: "loading" });
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    let timeout = 0;
     try {
-      const res = await fetch(`${API_URL}/runtime/config`, {
-        cache: "no-store",
-        headers: await optionalAuthHeaders(),
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new Error(`Runtime config request failed (${res.status})`);
+      // A cold API instance or a just-issued session token can fail the first request; retry quietly
+      // (with a fresh token) before showing the error, instead of making people press Retry.
+      let res: Response | null = null;
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 4 && requestIsCurrent(); attempt += 1) {
+        if (attempt > 0) await new Promise((resolve) => window.setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+        const controller = new AbortController();
+        timeout = window.setTimeout(() => controller.abort(), 25_000);
+        try {
+          let headers: Record<string, string> = {};
+          if (attempt === 0 || !isSignedIn) {
+            headers = await optionalAuthHeaders();
+          } else {
+            const token = await getToken({ skipCache: true }).catch(() => null);
+            if (token) headers = { Authorization: `Bearer ${token}` };
+          }
+          const attemptRes = await fetch(`${API_URL}/runtime/config`, { cache: "no-store", headers, signal: controller.signal });
+          if (attemptRes.ok) {
+            res = attemptRes;
+            break;
+          }
+          lastError = new Error(`Runtime config request failed (${attemptRes.status})`);
+          if (attemptRes.status !== 401 && attemptRes.status < 500) break;
+        } catch (e) {
+          lastError = e;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      }
+      if (!requestIsCurrent()) return;
+      if (!res) throw lastError ?? new Error("Runtime config request failed");
 
       const config = (await res.json()) as RuntimeConfigContract;
       if (!requestIsCurrent()) return;

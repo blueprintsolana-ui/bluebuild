@@ -14,7 +14,7 @@ type FormaAuthValue = {
   hasIdentity: boolean;
   identityKey: string;
   userImageUrl: string | null;
-  getToken: () => Promise<string | null>;
+  getToken: (options?: { skipCache?: boolean }) => Promise<string | null>;
   openSignIn: (options?: OpenSignInOptions) => void;
 };
 
@@ -59,7 +59,7 @@ function ClerkAuthBridge({ children }: { children: React.ReactNode }) {
       hasIdentity: Boolean(isSignedIn),
       identityKey: userId || (isSignedIn ? "clerk-signed-in" : "clerk-signed-out"),
       userImageUrl: user?.imageUrl || null,
-      getToken: async () => (await getToken()) || null,
+      getToken: async (options?: { skipCache?: boolean }) => (await getToken(options)) || null,
       openSignIn: (options) => {
         void openSignIn(options);
       },

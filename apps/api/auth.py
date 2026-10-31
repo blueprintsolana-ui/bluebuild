@@ -115,6 +115,8 @@ def verify_clerk_bearer_token(token: str) -> Dict[str, Any]:
             signing_key.key,
             algorithms=["RS256"],
             issuer=issuer,
+            # Tolerate small clock differences between Clerk and this server (Clerk's SDKs allow 5s).
+            leeway=10,
             options={"verify_aud": False},
         )
     except HTTPException:
