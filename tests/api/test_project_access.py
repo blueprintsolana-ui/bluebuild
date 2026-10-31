@@ -1021,6 +1021,54 @@ class ProjectGenerationAccessTests(unittest.TestCase):
         self.assertEqual("generated-chat", response["chat_id"])
 
 
+    def _run_failed_generation(self, request: GenerateProjectRequest):
+        job_store = MagicMock()
+        job_store.is_cancelled.return_value = False
+        failed_response = {
+            "generation_status": "failed",
+            "project_ir": {
+                "assembly_metadata": {
+                    "project_id": "generated-project",
+                    "generation_stage_failures": [{
+                        "stage_id": "web_architect",
+                        "status": "failed",
+                        "error": {"message": "anthropic request failed with HTTP 400: Your credit balance is too low"},
+                    }],
+                }
+            },
+        }
+        with (
+            patch.object(main, "_apply_user_integrations"),
+            patch.object(main, "get_workflow_debug_config", return_value={}),
+            patch.object(main, "_deployment_runtime_config", return_value={"alpha_generation_gate_active": False}),
+            patch.object(main, "JOB_STORE", job_store),
+            patch.object(main, "observe_agent_pipeline", return_value=nullcontext()),
+            patch.object(main, "ensure_chat_project"),
+            patch.object(main, "build_generation_response", return_value=failed_response),
+            patch.object(main, "ensure_project_action_allowed"),
+            patch.object(main, "_delete_cancelled_generation_projects") as delete_projects,
+            self.assertRaises(HTTPException) as raised,
+        ):
+            asyncio.run(main.generate_project_endpoint(request, _user_context("user-a")))
+        return raised.exception, delete_projects, job_store
+
+    def test_failed_generation_explains_why_and_drops_its_empty_project(self) -> None:
+        error, delete_projects, job_store = self._run_failed_generation(GenerateProjectRequest(prompt="Build a sensor"))
+
+        self.assertEqual(502, error.status_code)
+        self.assertEqual("generation_root_failed", error.detail["code"])
+        self.assertIn("out of credit", error.detail["message"])
+        self.assertNotIn("anthropic", error.detail["message"].lower())
+        delete_projects.assert_called_once()
+        job_store.mark_failed.assert_called_once()
+
+    def test_failed_regeneration_keeps_the_existing_project(self) -> None:
+        _error, delete_projects, _job_store = self._run_failed_generation(
+            GenerateProjectRequest(prompt="Build a sensor", project_id="11111111-1111-4111-8111-111111111111")
+        )
+        delete_projects.assert_not_called()
+
+
 class ProjectIterationAccessTests(unittest.TestCase):
     def test_saved_legacy_iteration_appends_revision_and_refreshes_projection(self) -> None:
         project_id = "11111111-1111-4111-8111-111111111111"

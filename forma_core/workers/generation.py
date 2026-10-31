@@ -10,6 +10,7 @@ from typing import Any, Awaitable, Callable, Protocol
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from forma_core.agents.failure_messages import generation_failure_message
 from forma_core.agents.pipeline import (
     AgentPipelineEvent,
     PipelineCancelledError,
@@ -571,7 +572,7 @@ def _success_result(request: WorkerRequest, outcome: ProjectRevisionOutcome) -> 
             message=(
                 "One or more generation stages failed; successful artifacts were preserved."
                 if generation_status == "partial"
-                else "A required root generation stage failed; diagnostics were preserved."
+                else generation_failure_message({"project_ir": revision.state.model_dump(mode="json")})
             ),
             retryable=True,
             details={

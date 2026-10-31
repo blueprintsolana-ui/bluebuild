@@ -145,6 +145,7 @@ from apps.api.a2a import (
 )
 from forma_core.images import get_image_output_debug_config
 from forma_core.persistence.images import refresh_signed_image_url
+from forma_core.agents.failure_messages import generation_failure_message
 from forma_core.config.contract import resolve_runtime_contract
 from forma_core.workspaces.projects.iteration import ProjectIterator
 from forma_core.workspaces.projects.cad_generation import ensure_native_cad_model
@@ -883,11 +884,27 @@ async def generate_project_endpoint(request: GenerateProjectRequest, user: UserC
         if generation_status == "partial":
             JOB_STORE.mark_partial(job_id, response)
         elif generation_status == "failed":
+            failure_message = generation_failure_message(response)
             JOB_STORE.mark_failed(
                 job_id,
-                "A required root generation stage failed.",
+                failure_message,
                 error_code="generation_root_failed",
                 correlation_id=correlation_id,
+            )
+            # A build whose planning step failed has no parts to show. Drop the empty project this
+            # request created (never an existing project being regenerated) and say why instead.
+            if not request.project_id and not request.retry_stage:
+                _delete_cancelled_generation_projects(job_id)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=api_error_detail(
+                    code="generation_root_failed",
+                    message=failure_message,
+                    job_id=job_id,
+                    provider=request.provider,
+                    model=request.model,
+                    correlation_id=correlation_id,
+                ),
             )
         else:
             JOB_STORE.mark_succeeded(job_id, response)
@@ -1006,6 +1023,8 @@ async def generate_project_endpoint(request: GenerateProjectRequest, user: UserC
                 context=payload,
             ),
         ) from e
+    except HTTPException:
+        raise
     except AlphaGenerationUnavailableError as e:
         error_debug = exception_debug_payload(e, context=payload) if debug_mode_enabled() else None
         code = "alpha_generation_unavailable" if str(e) == ALPHA_GENERATION_UNAVAILABLE_MESSAGE else "llm_generation_unavailable"

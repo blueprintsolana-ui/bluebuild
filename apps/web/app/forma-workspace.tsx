@@ -4490,7 +4490,7 @@ export function FormaWorkspace({
           });
           return;
         }
-        if (apiError.code === "llm_output_invalid" || apiError.code === "llm_generation_unavailable") {
+        if (apiError.code === "llm_output_invalid" || apiError.code === "llm_generation_unavailable" || apiError.code === "generation_root_failed") {
           setGenerationInputNotice(displayErrorMessage);
           updateChatMessage(assistantMessageId, {
             content: displayErrorMessage,
