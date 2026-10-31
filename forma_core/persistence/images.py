@@ -1,7 +1,10 @@
 """Image persistence selected alongside the primary project database."""
 
 import base64
+import json
 import mimetypes
+import threading
+import time
 from forma_core.config import config
 import re
 import uuid
@@ -10,7 +13,7 @@ import urllib.request
 from forma_core.safe_images import fetch_trusted_image
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -319,6 +322,52 @@ def create_signed_image_url(bucket: str, key: str, expires_in: Optional[int] = N
     bucket_proxy = _supabase_storage_bucket(bucket)
     signed = bucket_proxy.create_signed_url(key, expires_in or _signed_url_seconds())
     return signed.get("signedURL") or signed.get("signedUrl")
+
+
+_SIGNED_PATH_RE = re.compile(r"/storage/v1/object/sign/([^/?#]+)/([^?#]+)")
+_REFRESHED_URLS: Dict[Tuple[str, str], Tuple[str, float]] = {}
+_REFRESHED_URLS_LOCK = threading.Lock()
+
+
+def _signed_token_expiry(url: str) -> Optional[float]:
+    """The ``exp`` claim of a Supabase signed URL's token, or None if it can't be read."""
+    try:
+        token = url.split("token=", 1)[1].split("&", 1)[0]
+        payload = token.split(".")[1]
+        return float(json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["exp"])
+    except Exception:
+        return None
+
+
+def refresh_signed_image_url(url: Optional[str], *, min_remaining_seconds: int = 3600) -> Optional[str]:
+    """Re-sign a stored Supabase signed image URL that has expired or is about to.
+
+    Project records keep the signed URL from when the image was made, so older projects
+    carry dead links. Other URLs (public, data:, unknown) are returned unchanged.
+    """
+    if not url or not isinstance(url, str):
+        return url
+    match = _SIGNED_PATH_RE.search(urlparse(url).path)
+    if not match:
+        return url
+    now = time.time()
+    expiry = _signed_token_expiry(url)
+    if expiry is not None and expiry - now > min_remaining_seconds:
+        return url
+    bucket, key = unquote(match.group(1)), unquote(match.group(2))
+    with _REFRESHED_URLS_LOCK:
+        cached = _REFRESHED_URLS.get((bucket, key))
+    if cached and cached[1] - now > min_remaining_seconds:
+        return cached[0]
+    try:
+        fresh = create_signed_image_url(bucket, key)
+    except Exception:
+        return url
+    if not fresh:
+        return url
+    with _REFRESHED_URLS_LOCK:
+        _REFRESHED_URLS[(bucket, key)] = (fresh, _signed_token_expiry(fresh) or now + _signed_url_seconds())
+    return fresh
 
 
 def _find_project_image_key(project_id: str, prefix: str, bucket: str) -> Optional[Tuple[str, Dict[str, Any]]]:

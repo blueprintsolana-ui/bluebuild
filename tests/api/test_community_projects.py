@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import json
+import time
 import unittest
 from unittest.mock import patch
 
@@ -7,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from apps.api import bluebuild_launchpad as launchpad
 from apps.api import main
+from forma_core.persistence import images
 
 
 def _record(project_id: str, title: str, category: str, created_at: str, **extra):
@@ -28,6 +32,7 @@ RECORDS = [
     _record("p1", "Plant pinger", "Home", "2026-10-01T00:00:00Z"),
     _record("p2", "Bike light", "Outdoor", "2026-10-05T00:00:00Z"),
     _record("p3", "Smart lock", "Home", "2026-10-03T00:00:00Z"),
+    _record("p4", "Failed build", "Home", "2026-10-06T00:00:00Z", parts_count=0),
 ]
 REMIXES = {"p1": {"remix_count": 1}, "p2": {"remix_count": 9}, "p3": {"remix_count": 4}}
 
@@ -73,6 +78,35 @@ class CommunityProjectsTests(unittest.TestCase):
         items = {item["project_id"]: item for item in self.get()["items"]}
         self.assertEqual("BRAKE", items["p2"]["coin"]["symbol"])
         self.assertIsNone(items["p1"]["coin"])
+
+
+    def test_builds_without_parts_are_left_out(self) -> None:
+        page = self.get()
+        self.assertNotIn("p4", [item["project_id"] for item in page["items"]])
+        self.assertEqual(3, page["all_total"])
+
+
+def _signed_url(key: str, exp: float) -> str:
+    payload = base64.urlsafe_b64encode(json.dumps({"exp": exp}).encode()).decode().rstrip("=")
+    return f"https://x.supabase.co/storage/v1/object/sign/contents/{key}?token=h.{payload}.s"
+
+
+class RefreshSignedImageUrlTests(unittest.TestCase):
+    def setUp(self) -> None:
+        images._REFRESHED_URLS.clear()
+
+    def test_expired_links_are_re_signed(self) -> None:
+        fresh = _signed_url("images/a/product-1.png", time.time() + 86400)
+        with patch.object(images, "create_signed_image_url", return_value=fresh) as sign:
+            self.assertEqual(fresh, images.refresh_signed_image_url(_signed_url("images/a/product-1.png", time.time() - 10)))
+            sign.assert_called_once_with("contents", "images/a/product-1.png")
+
+    def test_live_and_other_links_are_left_alone(self) -> None:
+        live = _signed_url("images/a/product-1.png", time.time() + 86400)
+        with patch.object(images, "create_signed_image_url") as sign:
+            self.assertEqual(live, images.refresh_signed_image_url(live))
+            self.assertEqual("data:image/png;base64,AA", images.refresh_signed_image_url("data:image/png;base64,AA"))
+            sign.assert_not_called()
 
 
 class LaunchedCoinsTests(unittest.TestCase):

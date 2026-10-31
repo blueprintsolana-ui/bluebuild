@@ -401,6 +401,7 @@ function CommunityCard({
 }) {
   const handle = makerHandle(project);
   const dwg = drawingNumber(project.project_id) || "BB";
+  const [imageFailed, setImageFailed] = useState(false);
   return (
     <div
       data-ccard
@@ -418,9 +419,9 @@ function CommunityCard({
     >
       <span className="bb-ctape" style={{ transform: `rotate(${tapeTilt})` }} aria-hidden="true" />
       <div className="bb-ccard__render">
-        {image ? (
+        {image && !imageFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image.src} alt="" loading="lazy" />
+          <img src={image.src} alt="" loading="lazy" onError={() => setImageFailed(true)} />
         ) : (
           <span className="bb-ccard__dwg">DWG {dwg} · RENDER</span>
         )}

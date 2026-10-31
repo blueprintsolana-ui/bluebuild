@@ -144,6 +144,7 @@ from apps.api.a2a import (
     submit_a2a_message,
 )
 from forma_core.images import get_image_output_debug_config
+from forma_core.persistence.images import refresh_signed_image_url
 from forma_core.config.contract import resolve_runtime_contract
 from forma_core.workspaces.projects.iteration import ProjectIterator
 from forma_core.workspaces.projects.cad_generation import ensure_native_cad_model
@@ -2495,6 +2496,34 @@ def _public_gallery_records() -> List[Dict[str, Any]]:
     return records
 
 
+def _community_ready(record: Dict[str, Any]) -> bool:
+    """Leave builds that never produced parts (failed or empty generations) out of Community."""
+    try:
+        return int(record.get("parts_count") or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _with_fresh_image_urls(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Replace expired signed image links (records keep the link from when the image was made)."""
+    fresh_records = []
+    for record in records:
+        record = dict(record)
+        for key, value in list(record.items()):
+            if key.endswith("_image_url") and isinstance(value, str):
+                record[key] = refresh_signed_image_url(value)
+        sequence = record.get("product_visual_sequence")
+        if isinstance(sequence, list):
+            record["product_visual_sequence"] = [
+                {**item, "url": refresh_signed_image_url(item["url"])}
+                if isinstance(item, dict) and isinstance(item.get("url"), str)
+                else item
+                for item in sequence
+            ]
+        fresh_records.append(record)
+    return fresh_records
+
+
 def _community_text(record: Dict[str, Any]) -> str:
     return " ".join(
         str(record.get(key) or "")
@@ -2517,7 +2546,7 @@ def list_community_projects_endpoint(
         limit = max(1, min(int(limit), 30))
         offset = max(0, int(offset))
         sort = sort if sort in COMMUNITY_SORTS else "trending"
-        records = _public_gallery_records()
+        records = [record for record in _public_gallery_records() if _community_ready(record)]
         project_ids = [str(record.get("project_id") or "") for record in records]
         # Remix counts are only needed to sort by them; the page itself is enriched below.
         engagement = project_engagement_for_ids(project_ids, None) if sort == "remixed" else {}
@@ -2546,7 +2575,10 @@ def list_community_projects_endpoint(
                 reverse=True,
             )
         page = matches[offset:offset + limit]
-        items = _with_project_engagement(_personalize_public_project_records(page, user.owner_user_id), user.owner_user_id)
+        items = _with_project_engagement(
+            _personalize_public_project_records(_with_fresh_image_urls(page), user.owner_user_id),
+            user.owner_user_id,
+        )
         return {
             "items": items,
             "total": len(matches),
