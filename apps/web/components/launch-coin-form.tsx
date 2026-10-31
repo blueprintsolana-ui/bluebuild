@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConnectionProvider, WalletProvider, useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { WalletReadyState } from "@solana/wallet-adapter-base";
+import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { ComputeBudgetProgram, Connection, Keypair, Transaction, type TransactionInstruction } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
@@ -111,11 +111,34 @@ function LaunchCoinFormBody({ projectId, initialForm, images, maxInitialBuySol, 
   const initialBuy = Number(form.initialBuySol || 0);
   const logoSrc = uploadedImage || imageChoice;
 
+  // Connect only after a click. Reconnecting a remembered wallet on page load could leave the
+  // adapter "connecting" forever (missed popup, locked wallet), which blocked every wallet button.
+  const pendingWallet = useRef<WalletName | null>(null);
+  const forgotRemembered = useRef(false);
   useEffect(() => {
-    if (wallet && !connected && !connecting) {
-      connect().catch(() => setError("The wallet didn't connect. Open your wallet and try again."));
+    if (forgotRemembered.current) return;
+    forgotRemembered.current = true;
+    select(null);
+  }, [select]);
+  useEffect(() => {
+    const wanted = pendingWallet.current;
+    if (!wanted || connected || connecting) return;
+    if (!wallet) {
+      select(wanted);
+      return;
     }
-  }, [wallet, connected, connecting, connect]);
+    if (wallet.adapter.name !== wanted) return;
+    pendingWallet.current = null;
+    connect().catch(() => setError("The wallet didn't connect. Open your wallet, unlock it, and try again."));
+  }, [wallet, connected, connecting, connect, select]);
+
+  const chooseWallet = (name: WalletName) => {
+    setError(null);
+    pendingWallet.current = name;
+    // A fresh selection resets an attempt that never finished; the effect above then connects.
+    if (wallet) select(null);
+    else select(name);
+  };
 
   useEffect(() => {
     if (!publicKey) {
@@ -272,12 +295,16 @@ function LaunchCoinFormBody({ projectId, initialForm, images, maxInitialBuySol, 
     }
   }, [connection, form, formProblem, getToken, logoSrc, onLaunched, projectId, publicKey, signAllTransactions, signTransaction]);
 
+  // With no wallet yet, the big button connects the first wallet found instead of sitting disabled.
+  const needsWallet = !publicKey && availableWallets.length > 0 && !busy && phase.step === "form";
   const ticker = form.symbol.trim().replace(/^\$/, "").toUpperCase() || "???";
   const buttonLabel = busy
     ? phase.message
     : phase.step === "done"
       ? "Launched · view pitch deck →"
-      : !publicKey
+      : connecting
+        ? `Waiting for ${wallet?.adapter.name || "your wallet"}… check its popup`
+        : !publicKey
         ? "Connect wallet to launch"
         : `Launch $${ticker} on pump.fun →`;
 
@@ -321,12 +348,8 @@ function LaunchCoinFormBody({ projectId, initialForm, images, maxInitialBuySol, 
                     <button
                       key={item.adapter.name}
                       type="button"
-                      disabled={connecting}
                       className="bb-wallet-option"
-                      onClick={() => {
-                        setError(null);
-                        select(item.adapter.name);
-                      }}
+                      onClick={() => chooseWallet(item.adapter.name)}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- wallet-provided icon */}
                       <img src={item.adapter.icon} alt="" className="h-5 w-5" />
@@ -459,8 +482,8 @@ function LaunchCoinFormBody({ projectId, initialForm, images, maxInitialBuySol, 
 
             <button
               type="button"
-              onClick={() => void launch()}
-              disabled={Boolean(formProblem) || busy}
+              onClick={() => (needsWallet ? chooseWallet(availableWallets[0].adapter.name) : void launch())}
+              disabled={busy || (Boolean(formProblem) && !needsWallet)}
               className={`bb-launch-btn is-big ${busy ? "is-busy" : ""}`}
             >
               {buttonLabel}

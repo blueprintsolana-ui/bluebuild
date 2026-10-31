@@ -45,6 +45,7 @@ create unique index if not exists ux_bluebuild_coin_launches_one_per_project
 
 -- Only the backend (service role) touches this table.
 alter table public.bluebuild_coin_launches enable row level security;
+revoke all on public.bluebuild_coin_launches from anon, authenticated;
 grant select, insert, update, delete on public.bluebuild_coin_launches to service_role;
 
 -- Public read; only the backend's service role writes (no storage policies grant
